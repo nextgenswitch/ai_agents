@@ -12,9 +12,14 @@ from pipecat.processors.aggregators.llm_response_universal import LLMContextAggr
 from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService
 from pipecat.transports.base_transport import TransportParams
 from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
+from pipecat.transports.websocket.fastapi import (
+    FastAPIWebsocketParams,
+    FastAPIWebsocketTransport,
+)
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.services.llm_service import FunctionCallParams
 
+from nextgenswitch_serializer import NextGenSwitchFrameSerializer
 load_dotenv(override=True)
 
 SYSTEM_INSTRUCTION = f"""
@@ -112,9 +117,8 @@ Examples:
 - "Thanks for calling {{"Infosoftbd Solutions"}}. Have a nice day."
 """
 
-
-async def run_bot(webrtc_connection):
-    pipecat_transport = SmallWebRTCTransport(
+def _build_webrtc_transport(webrtc_connection: object) -> SmallWebRTCTransport:
+    return SmallWebRTCTransport(
         webrtc_connection=webrtc_connection,
         params=TransportParams(
             audio_in_enabled=True,
@@ -124,16 +128,55 @@ async def run_bot(webrtc_connection):
         ),
     )
 
-    async def close_session(params: FunctionCallParams) -> dict:
-        """Gracefully close the WebRTC connection when the caller wants to end."""
-        logger.info("Closing WebRTC connection")
+
+def _build_websocket_transport(websocket: object) -> FastAPIWebsocketTransport:
+    return FastAPIWebsocketTransport(
+        websocket=websocket,
+        params=FastAPIWebsocketParams(
+            audio_in_enabled=True,
+            audio_out_enabled=True,
+            add_wav_header=False,
+            vad_analyzer=SileroVADAnalyzer(),
+            serializer=NextGenSwitchFrameSerializer(),
+        ),
+    )
+
+
+async def run_bot(
+    webrtc_connection=None,
+    websocket=None,
+    stream_id=None,
+    call_sid=None,
+    bot_params=None,
+    testing=False,
+):
+    if webrtc_connection and websocket:
+        raise ValueError("Provide either webrtc_connection or websocket, not both.")
+    if not webrtc_connection and not websocket:
+        raise ValueError("No transport input provided to run_bot.")
+
+    transport = (
+        _build_webrtc_transport(webrtc_connection)
+        if webrtc_connection
+        else _build_websocket_transport(websocket)
+    )
+    close_callback = None
+    if webrtc_connection:
         if hasattr(webrtc_connection, "disconnect"):
-            await webrtc_connection.disconnect()
+            close_callback = webrtc_connection.disconnect
         elif hasattr(webrtc_connection, "close"):
-            await webrtc_connection.close()
+            close_callback = webrtc_connection.close
+    elif websocket:
+        close_callback = websocket.close
+
+    async def close_session(params: FunctionCallParams) -> dict:
+        """Gracefully close the active transport session."""
+        logger.info("Closing transport session")
+        if close_callback:
+            await close_callback()
         else:
-            logger.warning("WebRTC connection has no close method")
-        logger.info("WebRTC connection closed")
+            logger.warning("No close callback available for this session")
+        logger.info("Transport session closed")
         return {"status": "closed"}
 
     tools = ToolsSchema(standard_tools=[close_session])
@@ -160,10 +203,10 @@ async def run_bot(webrtc_connection):
 
     pipeline = Pipeline(
         [
-            pipecat_transport.input(),
+            transport.input(),
             context_aggregator.user(),
             llm,  # LLM
-            pipecat_transport.output(),
+            transport.output(),
             context_aggregator.assistant(),
         ]
     )
@@ -177,13 +220,13 @@ async def run_bot(webrtc_connection):
         ),
     )
 
-    @pipecat_transport.event_handler("on_client_connected")
+    @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
         logger.info("Pipecat Client connected")
         # Kick off the conversation.
         await task.queue_frames([LLMRunFrame()])
 
-    @pipecat_transport.event_handler("on_client_disconnected")
+    @transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(transport, client):
         logger.info("Pipecat Client disconnected")
         await task.cancel()

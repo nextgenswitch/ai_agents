@@ -1,4 +1,5 @@
 python-dotenv
 fastapi[all]
+json
 uvicorn
 pipecat-ai[google,silero, webrtc]>=0.0.99

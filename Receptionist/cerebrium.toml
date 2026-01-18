@@ -1,0 +1,27 @@
+[cerebrium.deployment]
+name = "receptionist-agent"
+python_version = "3.11"
+include = ["./*"]
+exclude = ["./.venv", "./__pycache__", "./.env"]
+entrypoint = ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
+
+[cerebrium.hardware]
+region = "us-east-1"
+provider = "aws"
+compute = "CPU"
+cpu = 4
+memory = 8.0
+
+[cerebrium.scaling]
+min_replicas = 1
+max_replicas = 2
+cooldown = 180
+
+[cerebrium.dependencies.pip]
+"fastapi[all]" = "latest"
+uvicorn = "latest"
+python-dotenv = "latest"
+loguru = "latest"
+"pipecat-ai[google,silero,webrtc]" = ">=0.0.99"
+torch = ">=2.1.0"
+torchaudio = ">=2.1.0"
