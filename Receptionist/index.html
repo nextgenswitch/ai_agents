@@ -1,38 +1,505 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-connection="disconnected">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebRTC Voice Agent</title>
+    <title>Receptionist AI Agent</title>
     <style>
+      @import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;700&family=Space+Grotesk:wght@400;500;600&display=swap");
+
+      :root {
+        --paper: #f6f1eb;
+        --ink: #191a1f;
+        --muted: #5a5b66;
+        --accent: #155e63;
+        --accent-2: #d28b1d;
+        --card: #ffffff;
+        --line: rgba(19, 23, 34, 0.1);
+        --shadow-soft: 0 24px 50px rgba(16, 24, 40, 0.12);
+        --shadow-tight: 0 10px 24px rgba(16, 24, 40, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
-        font-family: Arial, sans-serif;
-        text-align: center;
-        margin-top: 50px;
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Space Grotesk", sans-serif;
+        color: var(--ink);
+        background: radial-gradient(120% 90% at 10% 5%, #fff5e6 0%, transparent 50%),
+          radial-gradient(120% 90% at 90% 10%, #e7f2f2 0%, transparent 50%),
+          var(--paper);
+        position: relative;
+        overflow-x: hidden;
       }
-      #status {
+
+      body::before,
+      body::after {
+        content: "";
+        position: fixed;
+        width: 55vmax;
+        height: 55vmax;
+        border-radius: 50%;
+        filter: blur(0px);
+        opacity: 0.4;
+        z-index: -2;
+      }
+
+      body::before {
+        top: -20vmax;
+        right: -15vmax;
+        background: radial-gradient(circle, rgba(21, 94, 99, 0.25), transparent 60%);
+      }
+
+      body::after {
+        bottom: -20vmax;
+        left: -15vmax;
+        background: radial-gradient(circle, rgba(210, 139, 29, 0.3), transparent 60%);
+      }
+
+      .page {
+        display: flex;
+        flex-direction: column;
+        gap: 48px;
+        padding: 32px 6vw 56px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+      }
+
+      .brand {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .brand-mark {
+        font-family: "Fraunces", serif;
+        font-size: 22px;
+        letter-spacing: -0.02em;
+      }
+
+      .brand-sub {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+        color: var(--muted);
+      }
+
+      .topbar-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        background: rgba(21, 94, 99, 0.12);
+        color: var(--accent);
+      }
+
+      .chip.ghost {
+        background: transparent;
+        border: 1px solid var(--line);
+        color: var(--muted);
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+        gap: 48px;
+        align-items: center;
+      }
+
+      .intro {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .eyebrow {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.28em;
+        color: var(--muted);
+      }
+
+      h1 {
+        font-family: "Fraunces", serif;
+        font-size: clamp(34px, 4.2vw, 56px);
+        margin: 0;
+        letter-spacing: -0.02em;
+      }
+
+      .lead {
+        font-size: 18px;
+        line-height: 1.7;
+        color: var(--muted);
+        max-width: 540px;
+        margin: 0;
+      }
+
+      .metric-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+
+      .metric {
+        padding: 14px 16px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid var(--line);
+        min-width: 150px;
+        box-shadow: var(--shadow-tight);
+      }
+
+      .metric-value {
+        display: block;
         font-size: 20px;
-        margin: 20px;
+        font-weight: 600;
       }
-      button {
-        padding: 10px 20px;
+
+      .metric-label {
+        display: block;
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px;
+      }
+
+      .feature-card {
+        background: var(--card);
+        border-radius: 18px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow-tight);
+      }
+
+      .feature-card h3 {
+        margin: 0 0 8px;
         font-size: 16px;
+      }
+
+      .feature-card p {
+        margin: 0;
+        font-size: 14px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .console {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .console-card {
+        background: var(--card);
+        border-radius: 26px;
+        padding: 26px;
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow-soft);
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .console-top {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .status-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #c4c7d0;
+        box-shadow: 0 0 0 5px rgba(196, 199, 208, 0.2);
+        transition: background 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .status-text {
+        display: flex;
+        flex-direction: column;
+      }
+
+      #status {
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      #status-hint {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+
+      .primary-button {
+        border: none;
+        border-radius: 999px;
+        padding: 16px 24px;
+        font-size: 16px;
+        font-weight: 600;
+        color: #fff;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 0 12px 24px rgba(21, 94, 99, 0.25);
+      }
+
+      .primary-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 18px 30px rgba(21, 94, 99, 0.28);
+      }
+
+      .primary-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .consent {
+        margin: 0;
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .divider {
+        height: 1px;
+        background: var(--line);
+        width: 100%;
+      }
+
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+      }
+
+      .info-grid h3 {
+        margin: 0 0 6px;
+        font-size: 15px;
+      }
+
+      .info-grid p {
+        margin: 0;
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .footer-note {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      audio {
+        display: none;
+      }
+
+      :root[data-connection="connecting"] .status-dot {
+        background: #f4a72f;
+        box-shadow: 0 0 0 6px rgba(244, 167, 47, 0.25);
+        animation: pulse 1.6s infinite;
+      }
+
+      :root[data-connection="connected"] .status-dot {
+        background: #18a34a;
+        box-shadow: 0 0 0 6px rgba(24, 163, 74, 0.25);
+      }
+
+      :root[data-connection="disconnected"] .status-dot {
+        background: #8d93a1;
+        box-shadow: 0 0 0 6px rgba(141, 147, 161, 0.2);
+      }
+
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(244, 167, 47, 0.3);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(244, 167, 47, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(244, 167, 47, 0);
+        }
+      }
+
+      .fade-up {
+        animation: fadeUp 0.7s ease both;
+      }
+
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(16px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 900px) {
+        .hero-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .topbar {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+
+      @media (max-width: 600px) {
+        .page {
+          padding: 24px 5vw 40px;
+        }
+
+        .metric {
+          min-width: 100%;
+        }
+
+        .primary-button {
+          width: 100%;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .fade-up,
+        .primary-button,
+        .status-dot {
+          animation: none;
+          transition: none;
+        }
       }
     </style>
   </head>
   <body>
-    <h1>WebRTC Voice Agent</h1>
-    <p id="status">Disconnected</p>
-    <button id="connect-btn">Connect</button>
-    <audio id="audio-el" autoplay></audio>
+    <div class="page">
+      <header class="topbar fade-up">
+        <div class="brand">
+          <div class="brand-mark">Receptionist AI</div>
+          <div class="brand-sub">Infosoftbd Solutions</div>
+        </div>
+        <div class="topbar-actions">
+          <div class="chip">Live voice line</div>
+          <div class="chip ghost">Secure WebRTC</div>
+        </div>
+      </header>
+
+      <main class="hero-grid">
+        <section class="intro fade-up">
+          <div class="eyebrow">Professional voice concierge</div>
+          <h1>Answer every call with calm, clear precision.</h1>
+          <p class="lead">
+            This receptionist agent greets callers, captures intent, routes to the
+            right team, and takes accurate messages when needed. Built for warm,
+            efficient first impressions.
+          </p>
+          <div class="metric-grid">
+            <div class="metric">
+              <span class="metric-value">24/7</span>
+              <span class="metric-label">Availability</span>
+            </div>
+            <div class="metric">
+              <span class="metric-value">Instant</span>
+              <span class="metric-label">Greeting and routing</span>
+            </div>
+            <div class="metric">
+              <span class="metric-value">Human tone</span>
+              <span class="metric-label">Short, clear responses</span>
+            </div>
+          </div>
+          <div class="feature-grid">
+            <div class="feature-card">
+              <h3>Smart call flow</h3>
+              <p>Guided prompts capture name, reason, and callback time.</p>
+            </div>
+            <div class="feature-card">
+              <h3>Language aware</h3>
+              <p>Responds in Bangla or English based on the caller.</p>
+            </div>
+            <div class="feature-card">
+              <h3>Professional tone</h3>
+              <p>Polite, confident responses that feel natural on the phone.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="console fade-up">
+          <div class="console-card">
+            <div class="console-top">
+              <div class="status-dot" aria-hidden="true"></div>
+              <div class="status-text">
+                <span id="status" aria-live="polite">Disconnected</span>
+                <span id="status-hint">Ready for a live test call.</span>
+              </div>
+            </div>
+            <button id="connect-btn" class="primary-button" aria-pressed="false">
+              Connect
+            </button>
+            <p class="consent">
+              By connecting you allow microphone access for the duration of the call.
+            </p>
+            <div class="divider"></div>
+            <div class="info-grid">
+              <div>
+                <h3>Reception flow</h3>
+                <p>Greeting, intent capture, routing or message, and confirmation.</p>
+              </div>
+              <div>
+                <h3>Audio quality</h3>
+                <p>Use a quiet room and speak clearly for the best experience.</p>
+              </div>
+              <div>
+                <h3>Privacy</h3>
+                <p>Audio is used only for the live session and not stored here.</p>
+              </div>
+            </div>
+          </div>
+          <div class="footer-note">
+            Powered by WebRTC with secure media transport.
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <audio id="audio-el" autoplay playsinline></audio>
 
     <script>
       const statusEl = document.getElementById("status");
+      const statusHintEl = document.getElementById("status-hint");
       const buttonEl = document.getElementById("connect-btn");
       const audioEl = document.getElementById("audio-el");
+      const rootEl = document.documentElement;
 
       let connected = false;
+      let connecting = false;
       let peerConnection = null;
+      let localStream = null;
 
       const sendIceCandidate = async (pc, candidate) => {
         await fetch("/api/offer", {
@@ -61,13 +528,11 @@
         };
         const pc = new RTCPeerConnection(config);
 
-        // Queue to store ICE candidates until we have received the answer and have a session in progress
         pc.pendingIceCandidates = [];
         pc.canSendIceCandidates = false;
 
         addPeerConnectionEventListeners(pc);
         pc.ontrack = (e) => (audioEl.srcObject = e.streams[0]);
-        // SmallWebRTCTransport expects to receive both transceivers
         pc.addTransceiver(audioTrack, { direction: "sendrecv" });
         pc.addTransceiver("video", { direction: "sendrecv" });
         await pc.setLocalDescription(await pc.createOffer());
@@ -81,10 +546,8 @@
         pc.pc_id = answer.pc_id;
         await pc.setRemoteDescription(answer);
 
-        // Now we can send ICE candidates
         pc.canSendIceCandidates = true;
 
-        // Send any queued ICE candidates
         for (const candidate of pc.pendingIceCandidates) {
           await sendIceCandidate(pc, candidate);
         }
@@ -93,14 +556,47 @@
         return pc;
       };
 
+      const setState = (state, hint) => {
+        rootEl.dataset.connection = state;
+        statusEl.textContent =
+          state === "connected"
+            ? "Connected"
+            : state === "connecting"
+            ? "Connecting"
+            : "Disconnected";
+        statusHintEl.textContent = hint;
+        buttonEl.textContent = state === "connected" ? "Disconnect" : "Connect";
+        buttonEl.setAttribute("aria-pressed", state === "connected");
+        buttonEl.disabled = state === "connecting";
+        connecting = state === "connecting";
+        connected = state === "connected";
+      };
+
+      const _onConnecting = () => {
+        setState("connecting", "Securing microphone and connection.");
+      };
+
+      const _onConnected = () => {
+        setState("connected", "Live call active. Speak naturally.");
+      };
+
+      const _onDisconnected = () => {
+        setState("disconnected", "Ready for a live test call.");
+      };
+
       const connect = async () => {
         _onConnecting();
-        const audioStream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-        });
-        peerConnection = await createSmallWebRTCConnection(
-          audioStream.getAudioTracks()[0],
-        );
+        try {
+          localStream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+          peerConnection = await createSmallWebRTCConnection(
+            localStream.getAudioTracks()[0],
+          );
+        } catch (err) {
+          console.error("Failed to connect", err);
+          disconnect();
+        }
       };
 
       const addPeerConnectionEventListeners = (pc) => {
@@ -109,7 +605,7 @@
         };
         pc.onconnectionstatechange = () => {
           console.log("onconnectionstatechange", pc?.connectionState);
-          let connectionState = pc?.connectionState;
+          const connectionState = pc?.connectionState;
           if (connectionState === "connected") {
             _onConnected();
           } else if (connectionState === "disconnected") {
@@ -119,12 +615,9 @@
         pc.onicecandidate = async (event) => {
           if (event.candidate) {
             console.log("New ICE candidate:", event.candidate);
-            // Check if we can send ICE candidates (we have received the answer with pc_id)
             if (pc.canSendIceCandidates && pc.pc_id) {
-              // Send immediately
               await sendIceCandidate(pc, event.candidate);
             } else {
-              // Queue the candidate until we have pc_id
               pc.pendingIceCandidates.push(event.candidate);
             }
           } else {
@@ -133,40 +626,32 @@
         };
       };
 
-      const _onConnecting = () => {
-        statusEl.textContent = "Connecting";
-        buttonEl.textContent = "Disconnect";
-        connected = true;
-      };
-
-      const _onConnected = () => {
-        statusEl.textContent = "Connected";
-        buttonEl.textContent = "Disconnect";
-        connected = true;
-      };
-
-      const _onDisconnected = () => {
-        statusEl.textContent = "Disconnected";
-        buttonEl.textContent = "Connect";
-        connected = false;
-      };
-
       const disconnect = () => {
-        if (!peerConnection) {
-          return;
+        if (peerConnection) {
+          peerConnection.close();
+          peerConnection = null;
         }
-        peerConnection.close();
-        peerConnection = null;
+        if (localStream) {
+          for (const track of localStream.getTracks()) {
+            track.stop();
+          }
+          localStream = null;
+        }
         _onDisconnected();
       };
 
       buttonEl.addEventListener("click", async () => {
+        if (connecting) {
+          return;
+        }
         if (!connected) {
           await connect();
         } else {
           disconnect();
         }
       });
+
+      _onDisconnected();
     </script>
   </body>
 </html>

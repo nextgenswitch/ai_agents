@@ -12,6 +12,8 @@ from pipecat.processors.aggregators.llm_response_universal import LLMContextAggr
 from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService
 from pipecat.transports.base_transport import TransportParams
 from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
+from pipecat.adapters.schemas.tools_schema import ToolsSchema
+from pipecat.services.llm_service import FunctionCallParams
 
 load_dotenv(override=True)
 
@@ -111,7 +113,6 @@ Examples:
 """
 
 
-
 async def run_bot(webrtc_connection):
     pipecat_transport = SmallWebRTCTransport(
         webrtc_connection=webrtc_connection,
@@ -123,12 +124,28 @@ async def run_bot(webrtc_connection):
         ),
     )
 
+    async def close_session(params: FunctionCallParams) -> dict:
+        """Gracefully close the WebRTC connection when the caller wants to end."""
+        logger.info("Closing WebRTC connection")
+        if hasattr(webrtc_connection, "disconnect"):
+            await webrtc_connection.disconnect()
+        elif hasattr(webrtc_connection, "close"):
+            await webrtc_connection.close()
+        else:
+            logger.warning("WebRTC connection has no close method")
+        logger.info("WebRTC connection closed")
+        return {"status": "closed"}
+
+    tools = ToolsSchema(standard_tools=[close_session])
+
+
     llm = GeminiLiveLLMService(
         api_key=os.getenv("GOOGLE_API_KEY"),
         voice_id="Puck",  # Aoede, Charon, Fenrir, Kore, Puck
         transcribe_user_audio=True,
         transcribe_model_audio=True,
         system_instruction=SYSTEM_INSTRUCTION,
+        tools=tools,
     )
 
     context = LLMContext(
@@ -150,6 +167,7 @@ async def run_bot(webrtc_connection):
             context_aggregator.assistant(),
         ]
     )
+    llm.register_direct_function(close_session, cancel_on_interruption=False)
 
     task = PipelineTask(
         pipeline,
