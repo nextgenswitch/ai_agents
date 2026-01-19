@@ -28,7 +28,8 @@
         min-height: 100vh;
         font-family: "Space Grotesk", sans-serif;
         color: var(--ink);
-        background: radial-gradient(120% 90% at 10% 5%, #fff5e6 0%, transparent 50%),
+        background:
+          radial-gradient(120% 90% at 10% 5%, #fff5e6 0%, transparent 50%),
           radial-gradient(120% 90% at 90% 10%, #e7f2f2 0%, transparent 50%),
           var(--paper);
         position: relative;
@@ -50,13 +51,21 @@
       body::before {
         top: -20vmax;
         right: -15vmax;
-        background: radial-gradient(circle, rgba(21, 94, 99, 0.25), transparent 60%);
+        background: radial-gradient(
+          circle,
+          rgba(21, 94, 99, 0.25),
+          transparent 60%
+        );
       }
 
       body::after {
         bottom: -20vmax;
         left: -15vmax;
-        background: radial-gradient(circle, rgba(210, 139, 29, 0.3), transparent 60%);
+        background: radial-gradient(
+          circle,
+          rgba(210, 139, 29, 0.3),
+          transparent 60%
+        );
       }
 
       .page {
@@ -235,7 +244,9 @@
         border-radius: 50%;
         background: #c4c7d0;
         box-shadow: 0 0 0 5px rgba(196, 199, 208, 0.2);
-        transition: background 0.2s ease, box-shadow 0.2s ease;
+        transition:
+          background 0.2s ease,
+          box-shadow 0.2s ease;
       }
 
       .status-text {
@@ -263,7 +274,9 @@
         color: #fff;
         background: linear-gradient(135deg, var(--accent), var(--accent-2));
         cursor: pointer;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
         box-shadow: 0 12px 24px rgba(21, 94, 99, 0.25);
       }
 
@@ -415,9 +428,9 @@
           <div class="eyebrow">Professional voice concierge</div>
           <h1>Answer every call with calm, clear precision.</h1>
           <p class="lead">
-            This receptionist agent greets callers, captures intent, routes to the
-            right team, and takes accurate messages when needed. Built for warm,
-            efficient first impressions.
+            This receptionist agent greets callers, captures intent, routes to
+            the right team, and takes accurate messages when needed. Built for
+            warm, efficient first impressions.
           </p>
           <div class="metric-grid">
             <div class="metric">
@@ -458,25 +471,37 @@
                 <span id="status-hint">Ready for a live test call.</span>
               </div>
             </div>
-            <button id="connect-btn" class="primary-button" aria-pressed="false">
+            <button
+              id="connect-btn"
+              class="primary-button"
+              aria-pressed="false"
+            >
               Connect
             </button>
             <p class="consent">
-              By connecting you allow microphone access for the duration of the call.
+              By connecting you allow microphone access for the duration of the
+              call.
             </p>
             <div class="divider"></div>
             <div class="info-grid">
               <div>
                 <h3>Reception flow</h3>
-                <p>Greeting, intent capture, routing or message, and confirmation.</p>
+                <p>
+                  Greeting, intent capture, routing or message, and
+                  confirmation.
+                </p>
               </div>
               <div>
                 <h3>Audio quality</h3>
-                <p>Use a quiet room and speak clearly for the best experience.</p>
+                <p>
+                  Use a quiet room and speak clearly for the best experience.
+                </p>
               </div>
               <div>
                 <h3>Privacy</h3>
-                <p>Audio is used only for the live session and not stored here.</p>
+                <p>
+                  Audio is used only for the live session and not stored here.
+                </p>
               </div>
             </div>
           </div>
@@ -502,7 +527,7 @@
       let localStream = null;
 
       const sendIceCandidate = async (pc, candidate) => {
-        await fetch("/api/offer", {
+        await fetch("api/offer", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -537,7 +562,7 @@
         pc.addTransceiver("video", { direction: "sendrecv" });
         await pc.setLocalDescription(await pc.createOffer());
         const offer = pc.localDescription;
-        const response = await fetch("/api/offer", {
+        const response = await fetch("api/offer", {
           body: JSON.stringify({ sdp: offer.sdp, type: offer.type }),
           headers: { "Content-Type": "application/json" },
           method: "POST",
@@ -562,8 +587,8 @@
           state === "connected"
             ? "Connected"
             : state === "connecting"
-            ? "Connecting"
-            : "Disconnected";
+              ? "Connecting"
+              : "Disconnected";
         statusHintEl.textContent = hint;
         buttonEl.textContent = state === "connected" ? "Disconnect" : "Connect";
         buttonEl.setAttribute("aria-pressed", state === "connected");

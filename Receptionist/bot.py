@@ -148,7 +148,6 @@ async def run_bot(
     stream_id=None,
     call_sid=None,
     bot_params=None,
-    testing=False,
 ):
     if webrtc_connection and websocket:
         raise ValueError("Provide either webrtc_connection or websocket, not both.")
@@ -170,7 +169,7 @@ async def run_bot(
         close_callback = websocket.close
 
     async def close_session(params: FunctionCallParams) -> dict:
-        """Gracefully close the active transport session."""
+        """Gracefully close the active transport session. the function is called by the LLM when it decides to end the conversation."""
         logger.info("Closing transport session")
         if close_callback:
             await close_callback()

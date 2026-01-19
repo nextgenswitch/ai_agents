@@ -92,10 +92,9 @@ async def _websocket(websocket: WebSocket) -> None:
         bot_params = {}
 
     logger.info(
-        "Gemini websocket connected stream={} call={} testing={} params_keys={}",
+        "Gemini websocket connected stream={} call={}  params_keys={}",
         stream_id,
         call_sid,
-        app.state.testing,
         list(bot_params.keys()),
     )
 
@@ -104,7 +103,6 @@ async def _websocket(websocket: WebSocket) -> None:
         stream_id=stream_id,
         call_sid=call_sid,
         bot_params=bot_params,
-        testing=app.state.testing,
     )
 
 
@@ -117,7 +115,7 @@ async def lifespan(app: FastAPI):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the Receptionist HTTP server.")
     parser.add_argument(
-        "--host", default=os.getenv("HOST", "localhost"), help="Host for HTTP server (default: localhost)"
+        "--host", default=os.getenv("HOST", "0.0.0.0"), help="Host for HTTP server (default: localhost)"
     )
     parser.add_argument(
         "--port", type=int, default=os.getenv("PORT", 7860), help="Port for HTTP server (default: 7860)"
