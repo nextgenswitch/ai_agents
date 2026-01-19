@@ -22,7 +22,7 @@ async def transfer_call(call_sid: str, dial_number: str, base_url: str, api_key:
         logger.debug("Waiting {} seconds before transferring call {}", transfer_delay, call_sid)
         await asyncio.sleep(transfer_delay)
 
-    url = f"{base_url.rstrip('/')}/{call_sid}"
+    url = f"{base_url.rstrip('/')}/call/{call_sid}"
     headers = {}
     if api_key:
         headers["X-Authorization"] = api_key

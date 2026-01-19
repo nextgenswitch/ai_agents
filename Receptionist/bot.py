@@ -1,5 +1,6 @@
 import os
 
+import asyncio
 from dotenv import load_dotenv
 from loguru import logger
 from pipecat.audio.vad.silero import SileroVADAnalyzer
@@ -20,7 +21,11 @@ from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.services.llm_service import FunctionCallParams
 
 from nextgenswitch_serializer import NextGenSwitchFrameSerializer
+from transfer_call import transfer_call
+
 load_dotenv(override=True)
+
+GREETING_INSTRUCTION = "Start by greeting the user warmly and introducing yourself."
 
 SYSTEM_INSTRUCTION = f"""
 You are a professional virtual receptionist for {{"Infosoftbd Solutions"}}.
@@ -117,6 +122,8 @@ Examples:
 - "Thanks for calling {{"Infosoftbd Solutions"}}. Have a nice day."
 """
 
+
+
 def _build_webrtc_transport(webrtc_connection: object) -> SmallWebRTCTransport:
     return SmallWebRTCTransport(
         webrtc_connection=webrtc_connection,
@@ -129,7 +136,12 @@ def _build_webrtc_transport(webrtc_connection: object) -> SmallWebRTCTransport:
     )
 
 
-def _build_websocket_transport(websocket: object) -> FastAPIWebsocketTransport:
+def _build_websocket_transport(
+    websocket: object, stream_id: str | None = None
+) -> FastAPIWebsocketTransport:
+    serializer = NextGenSwitchFrameSerializer()
+    if stream_id:
+        serializer.set_stream_id(stream_id)
     return FastAPIWebsocketTransport(
         websocket=websocket,
         params=FastAPIWebsocketParams(
@@ -137,7 +149,7 @@ def _build_websocket_transport(websocket: object) -> FastAPIWebsocketTransport:
             audio_out_enabled=True,
             add_wav_header=False,
             vad_analyzer=SileroVADAnalyzer(),
-            serializer=NextGenSwitchFrameSerializer(),
+            serializer=serializer,
         ),
     )
 
@@ -157,7 +169,7 @@ async def run_bot(
     transport = (
         _build_webrtc_transport(webrtc_connection)
         if webrtc_connection
-        else _build_websocket_transport(websocket)
+        else _build_websocket_transport(websocket, stream_id=stream_id)
     )
     close_callback = None
     if webrtc_connection:
@@ -167,6 +179,35 @@ async def run_bot(
             close_callback = webrtc_connection.close
     elif websocket:
         close_callback = websocket.close
+    
+    system_instruction = SYSTEM_INSTRUCTION
+    greeting_instruction = GREETING_INSTRUCTION
+    google_api_key = os.getenv("GOOGLE_API_KEY")
+    forwarding_number = os.getenv("FORWARDING_NUMBER")
+    base_url = os.getenv("NEXTGENSWITCH_URL")
+    api_key = os.getenv("NEXTGENSWITCH_API_KEY")
+    api_secret = os.getenv("NEXTGENSWITCH_API_SECRET")
+
+    if bot_params and "prompt" in bot_params:
+        system_instruction = bot_params["prompt"]
+
+    if bot_params and "google_api_key" in bot_params:
+        google_api_key = bot_params["google_api_key"]
+
+    if bot_params and "greetings" in bot_params:
+        greeting_instruction = bot_params["greetings"]
+
+    if bot_params and "forwarding_number" in bot_params:
+        forwarding_number = bot_params["forwarding_number"]
+    
+    if bot_params and "nexgenswitch_api_url" in bot_params:
+        base_url = bot_params["nexgenswitch_api_url"]
+
+    if bot_params and "nexgenswitch_api_key" in bot_params:
+        api_key = bot_params["nexgenswitch_api_key"]
+
+    if bot_params and "nextgenswitch_api_secret" in bot_params:
+        api_secret = bot_params["nextgenswitch_api_secret"]
 
     async def close_session(params: FunctionCallParams) -> dict:
         """Gracefully close the active transport session. the function is called by the LLM when it decides to end the conversation."""
@@ -178,15 +219,43 @@ async def run_bot(
         logger.info("Transport session closed")
         return {"status": "closed"}
 
-    tools = ToolsSchema(standard_tools=[close_session])
+    async def transfer_call_into_live_agent(params: FunctionCallParams) -> None:
+        """Trasfer call to live agent. Call this function immidiately if user want to talk to a live agent.
 
+        This is a placeholder function to demonstrate how to transfer the call
+        into a live agent.
+        """
+        if not forwarding_number:
+            logger.error("Forwarding number is not configured; skipping live agent transfer for {}", call_sid)
+            await params.result_callback({"status": "unsupported"})
+            return
+        
+        if not base_url:
+            logger.error("NEXTGENSWITCH_URL is not configured; unable to transfer call {}", call_sid)
+            await params.result_callback({"status": "unsupported"})
+            return
+        if not api_key:
+            logger.error("NEXTGENSWITCH_API_KEY is not configured; unable to transfer call {}", call_sid)
+            await params.result_callback({"status": "unsupported"})
+            return
+        if not api_secret:
+            logger.error("NEXTGENSWITCH_API_SECRET is not configured; unable to transfer call {}", call_sid)
+            await params.result_callback({"status": "unsupported"})
+            return
+        
+
+        logger.info("Transferring call {} to live agent {}", call_sid, forwarding_number)
+        asyncio.create_task(transfer_call(call_sid, forwarding_number, base_url, api_key, api_secret))
+        await params.result_callback({"status": "transferred"})
+
+    tools = ToolsSchema(standard_tools=[close_session, transfer_call_into_live_agent])
 
     llm = GeminiLiveLLMService(
-        api_key=os.getenv("GOOGLE_API_KEY"),
+        api_key=google_api_key,
         voice_id="Puck",  # Aoede, Charon, Fenrir, Kore, Puck
         transcribe_user_audio=True,
         transcribe_model_audio=True,
-        system_instruction=SYSTEM_INSTRUCTION,
+        system_instruction=system_instruction,
         tools=tools,
     )
 
@@ -194,7 +263,7 @@ async def run_bot(
         [
             {
                 "role": "user",
-                "content": "Start by greeting the user warmly and introducing yourself.",
+                "content": greeting_instruction,
             }
         ],
     )
@@ -210,6 +279,7 @@ async def run_bot(
         ]
     )
     llm.register_direct_function(close_session, cancel_on_interruption=False)
+    llm.register_direct_function(transfer_call_into_live_agent, cancel_on_interruption=False)
 
     task = PipelineTask(
         pipeline,
