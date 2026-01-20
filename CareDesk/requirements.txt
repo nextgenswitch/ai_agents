@@ -2,3 +2,4 @@ python-dotenv
 fastapi[all]
 uvicorn
 pipecat-ai[openai,deepgram,cartesia,silero,webrtc]>=0.0.99
+openpyxl

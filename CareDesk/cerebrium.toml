@@ -1,16 +1,47 @@
 [cerebrium.deployment]
-name = "CareDesk"
+name = "caredesk"
 python_version = "3.11"
 docker_base_image_url = "debian:bookworm-slim"
 disable_auth = true
-include = ['./*', 'main.py', 'cerebrium.toml']
-exclude = ['.*']
+
+# IMPORTANT:
+# Your old exclude = ['.*'] can exclude ".env" even if you added it in include.
+# So we remove that and only exclude safe junk folders/files.
+include = [
+  "main.py",
+  "bot.py",
+  "nextgenswitch_serializer.py",
+  "cerebrium.toml",
+  "index.html",
+  ".env"
+]
+exclude = [
+  "__pycache__",
+  "*.pyc",
+  ".git",
+  ".venv",
+  ".mypy_cache",
+  ".pytest_cache"
+]
+
+# Optional but recommended: reduces dependency install time
+use_uv = true
+
+# Optional: If Pipecat takes longer to init, increase this
+deployment_initialization_timeout = 800
+
+
+[cerebrium.runtime.custom]
+port = 7860
+entrypoint = ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
+
 
 [cerebrium.hardware]
-cpu = 2.0
-memory = 2.0
+cpu = 4.0
+memory = 8.0
 compute = "CPU"
 region = "us-east-1"
+
 
 [cerebrium.scaling]
 min_replicas = 0
@@ -19,5 +50,31 @@ cooldown = 30
 replica_concurrency = 1
 scaling_metric = "concurrency_utilization"
 
+
+# SYSTEM LIBS (FIXES libxcb.so.1 crash from cv2 import)
+[cerebrium.dependencies.apt]
+libxcb1 = "latest"
+"libx11-6" = "latest"
+libxext6 = "latest"
+libxrender1 = "latest"
+libsm6 = "latest"
+"libglib2.0-0" = "latest"
+libgl1 = "latest"
+ffmpeg = "latest"
+libgomp1 = "latest"
+
+
 [cerebrium.dependencies.pip]
-numpy = "latest"
+"fastapi[all]" = "latest"
+uvicorn = "latest"
+python-dotenv = "latest"
+loguru = "latest"
+
+# Pipecat with Google + Silero + WebRTC
+"pipecat-ai[openai,deepgram,cartesia,silero,webrtc]" = "latest"
+
+# OpenCV Headless only (avoid opencv-python)
+opencv-python-headless = "latest"
+
+# Fix protobuf conflict warning in your logs (safe pin)
+opentelemetry-proto = ">=1.37.0"
