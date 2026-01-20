@@ -34,6 +34,7 @@ from nextgenswitch_serializer import NextGenSwitchFrameSerializer
 
 load_dotenv(override=True)
 
+
 logger.add(sys.stderr, level=os.getenv("LOG_LEVEL", "INFO"))
 
 
@@ -182,6 +183,12 @@ preferred_time, visit_type, existing_appointment, notes.
 For reschedule or cancel, include existing_appointment if known.
 Use YYYY-MM-DD for dates when possible.
 
+APPOINTMENT UPDATE TOOL:
+For edits, reschedules, or cancellations of existing appointments, call update_appointment once after confirming.
+Provide search_name or search_phone, plus search_date and search_time if known, to find the existing row.
+Set action to edit, reschedule, or cancel and include only the fields that should change.
+If update_appointment returns not_found, ask for missing details or offer to take a callback.
+
 ERROR HANDLING:
 If audio is unclear:
 "Sorry, I did not catch that. Could you please repeat?"
@@ -205,25 +212,182 @@ def _resolve_appointments_path() -> str:
     return os.path.join(os.path.dirname(__file__), "appointments.xlsx")
 
 
-def _normalize_date(value: str | None) -> str:
-    if not value:
+def _cell_text(value: object | None) -> str:
+    if value is None:
         return ""
-    cleaned = value.strip()
-    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d-%m-%Y", "%m-%d-%Y"):
-        try:
-            return datetime.strptime(cleaned, fmt).strftime("%Y-%m-%d")
-        except ValueError:
-            continue
-    return cleaned
+    return str(value).strip()
 
 
 def _safe_sheet_name(value: str) -> str:
     if not value:
         return ""
-    cleaned = re.sub(r"[\\/*?:\\[\\]]", "-", value).strip()
+    cleaned = re.sub(r"[\\/*?:\[\]]", "-", str(value)).strip()
     if not cleaned:
         return ""
     return cleaned[:31]
+
+
+def _normalize_phone(value: str | None) -> str:
+    if not value:
+        return ""
+    return re.sub(r"\D", "", str(value))
+
+
+def _normalize_date(value: str | None) -> str:
+    if not value:
+        return ""
+    cleaned = str(value).strip()
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d-%m-%Y", "%m-%d-%Y"):
+        try:
+            return datetime.strptime(cleaned, fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+
+    date_match = re.search(
+        r"(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4})", cleaned
+    )
+    if date_match:
+        candidate = date_match.group(1)
+        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d-%m-%Y", "%m-%d-%Y"):
+            try:
+                return datetime.strptime(candidate, fmt).strftime("%Y-%m-%d")
+            except ValueError:
+                continue
+
+    try:
+        from dateutil import parser as _dtparser  # type: ignore
+
+        dt = _dtparser.parse(cleaned, fuzzy=True, default=datetime.now())
+        if dt:
+            return dt.strftime("%Y-%m-%d")
+    except Exception:
+        pass
+
+    return cleaned
+
+
+def _normalize_time_bucket(value: str | None) -> str:
+    if not value:
+        return ""
+    text = _cell_text(value).lower()
+
+    if any(k in text for k in ["morning", "am"]):
+        return "morning"
+    if any(k in text for k in ["afternoon", "noon", "pm"]):
+        return "afternoon"
+    if any(k in text for k in ["evening", "night"]):
+        return "evening"
+
+    m = re.search(r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)?", text)
+    if not m:
+        return text
+
+    hour = int(m.group(1))
+    minute = int(m.group(2) or 0)
+    ampm = m.group(3)
+
+    if ampm == "pm" and hour < 12:
+        hour += 12
+    if ampm == "am" and hour == 12:
+        hour = 0
+
+    if 5 <= hour <= 11:
+        return "morning"
+    if 12 <= hour <= 16:
+        return "afternoon"
+    if 17 <= hour <= 22:
+        return "evening"
+    return f"{hour:02d}:{minute:02d}"
+
+
+def _phone_matches(search: str, candidate: str) -> bool:
+    if not search:
+        return True
+    if not candidate:
+        return False
+    if search == candidate:
+        return True
+    if len(search) >= 7 and candidate.endswith(search):
+        return True
+    if len(candidate) >= 7 and search.endswith(candidate):
+        return True
+    return False
+
+
+def _text_matches(search: str, candidate: str) -> bool:
+    if not search:
+        return True
+    if not candidate:
+        return False
+    search_norm = search.strip().lower()
+    candidate_norm = candidate.strip().lower()
+    return search_norm in candidate_norm or candidate_norm in search_norm
+
+
+def _date_matches(search: str, candidate: str) -> bool:
+    if not search:
+        return True
+    if not candidate:
+        return False
+
+    s_raw = _cell_text(search)
+    c_raw = _cell_text(candidate)
+
+    s_norm = _normalize_date(s_raw).strip().lower()
+    c_norm = _normalize_date(c_raw).strip().lower()
+
+    if s_norm == c_norm:
+        return True
+
+    if s_norm in c_norm or c_norm in s_norm:
+        return True
+
+    return False
+
+
+def _time_matches(search: str, candidate: str) -> bool:
+    if not search:
+        return True
+    if not candidate:
+        return False
+
+    s_raw = _cell_text(search).lower()
+    c_raw = _cell_text(candidate).lower()
+
+    s_bucket = _normalize_time_bucket(s_raw)
+    c_bucket = _normalize_time_bucket(c_raw)
+
+    if s_bucket == c_bucket:
+        return True
+
+    if s_raw in c_raw or c_raw in s_raw:
+        return True
+
+    return False
+
+
+def _ensure_sheet_headers(sheet) -> dict[str, int]:
+    header_cells = [cell.value for cell in sheet[1]]
+
+    if sheet.max_row == 1 and sheet.max_column == 1 and header_cells[0] is None:
+        for col_idx, name in enumerate(APPOINTMENTS_HEADERS, start=1):
+            sheet.cell(row=1, column=col_idx).value = name
+        return {name: idx + 1 for idx, name in enumerate(APPOINTMENTS_HEADERS)}
+
+    header_map: dict[str, int] = {}
+    for idx, value in enumerate(header_cells, start=1):
+        if value is None:
+            continue
+        header_map[_cell_text(value)] = idx
+
+    last_col = len(header_cells)
+    for name in APPOINTMENTS_HEADERS:
+        if name not in header_map:
+            last_col += 1
+            header_map[name] = last_col
+            sheet.cell(row=1, column=last_col).value = name
+
+    return header_map
 
 
 def _append_row_to_workbook(path: str, sheet_name: str, row: list[str]) -> None:
@@ -242,9 +406,7 @@ def _append_row_to_workbook(path: str, sheet_name: str, row: list[str]) -> None:
         sheet = workbook.active
         sheet.title = sheet_name
 
-    if sheet.max_row == 1 and sheet.max_column == 1 and sheet["A1"].value is None:
-        sheet.append(APPOINTMENTS_HEADERS)
-
+    _ensure_sheet_headers(sheet)
     sheet.append(row)
     workbook.save(path)
 
@@ -288,25 +450,17 @@ async def run_bot(
     call_sid=None,
     bot_params=None,
 ):
-    """
-    A Pipecat bot runner that supports either:
-    - WebRTC transport (SmallWebRTCTransport)
-    - FastAPI websocket transport (FastAPIWebsocketTransport)
-    """
-
     if webrtc_connection and websocket:
         raise ValueError("Provide either webrtc_connection or websocket, not both.")
     if not webrtc_connection and not websocket:
         raise ValueError("No transport input provided to run_bot.")
 
-    # Pick transport
     transport = (
         _build_webrtc_transport(webrtc_connection)
         if webrtc_connection
         else _build_websocket_transport(websocket, stream_id=stream_id)
     )
 
-    # Determine close callback
     close_callback = None
     if webrtc_connection:
         if hasattr(webrtc_connection, "disconnect"):
@@ -316,54 +470,39 @@ async def run_bot(
     elif websocket:
         close_callback = websocket.close
 
-    # --------------------------------------------------------
-    # Load params (env defaults, override by bot_params)
-    # --------------------------------------------------------
     system_instruction = SYSTEM_INSTRUCTION
     greeting_instruction = GREETING_INSTRUCTION
 
     openai_api_key = os.getenv("OPENAI_API_KEY")
     deepgram_api_key = os.getenv("DEEPGRAM_API_KEY")
-
     cartesia_api_key = os.getenv("CARTESIA_API_KEY")
     cartesia_voice_id = os.getenv(
         "CARTESIA_VOICE_ID", "5ee9feff-1265-424a-9d7f-8e4d431a12c7"
     )
 
-    # NextGenSwitch config (kept for your external usage)
     base_url = os.getenv("NEXTGENSWITCH_URL")
     api_key = os.getenv("NEXTGENSWITCH_API_KEY")
     api_secret = os.getenv("NEXTGENSWITCH_API_SECRET")
 
-    # Overrides from bot_params
     if bot_params and "prompt" in bot_params:
         system_instruction = bot_params["prompt"]
-
     if bot_params and "openai_api_key" in bot_params:
         openai_api_key = bot_params["openai_api_key"]
-
     if bot_params and "greetings" in bot_params:
         greeting_instruction = bot_params["greetings"]
-
     if bot_params and "nexgenswitch_api_url" in bot_params:
         base_url = bot_params["nexgenswitch_api_url"]
-
     if bot_params and "nexgenswitch_api_key" in bot_params:
         api_key = bot_params["nexgenswitch_api_key"]
-
     if bot_params and "nextgenswitch_api_secret" in bot_params:
         api_secret = bot_params["nextgenswitch_api_secret"]
-
     if bot_params and "deepgram_api_key" in bot_params:
         deepgram_api_key = bot_params["deepgram_api_key"]
-
     if bot_params and "cartesia_api_key" in bot_params:
         cartesia_api_key = bot_params["cartesia_api_key"]
-
     if bot_params and "cartesia_voice_id" in bot_params:
         cartesia_voice_id = bot_params["cartesia_voice_id"]
 
-    # Basic validation to prevent silent failures
     if not openai_api_key:
         raise ValueError("Missing OPENAI_API_KEY (env or bot_params.openai_api_key)")
     if not deepgram_api_key:
@@ -371,16 +510,10 @@ async def run_bot(
     if not cartesia_api_key:
         raise ValueError("Missing CARTESIA_API_KEY (env or bot_params.cartesia_api_key)")
 
-
     stt = DeepgramSTTService(api_key=deepgram_api_key)
     tts = CartesiaTTSService(api_key=cartesia_api_key, voice_id=cartesia_voice_id)
 
-
     async def close_session(params: FunctionCallParams) -> dict:
-        """
-        Gracefully close the active transport session.
-        This function is called by the LLM when it decides to end the conversation.
-        """
         logger.info("Closing transport session")
         if close_callback:
             await close_callback()
@@ -402,51 +535,219 @@ async def run_bot(
         visit_type: str | None = None,
         existing_appointment: str | None = None,
         notes: str | None = None,
-    ) -> None:
-        """Log appointment details to the Excel workbook.
+    ) -> dict:
+        preferred_date_norm = _normalize_date(preferred_date)
+        existing_norm = _cell_text(existing_appointment)
+        phone_norm = _normalize_phone(phone)
 
-        Args:
-            action: Appointment action such as book, reschedule, or cancel.
-            patient_name: Patient full name.
-            patient_age_or_dob: Patient age or date of birth.
-            phone: Primary phone number.
-            department_or_doctor: Requested department or doctor.
-            reason: Reason for the visit.
-            preferred_date: Preferred appointment date.
-            preferred_time: Preferred time window.
-            visit_type: First visit or follow-up.
-            existing_appointment: Existing appointment date/time (for reschedule or cancel).
-            notes: Extra details or message.
-        """
-        target_date = _normalize_date(preferred_date or existing_appointment)
+        target_date = preferred_date_norm or _normalize_date(existing_norm)
         if not target_date:
             target_date = datetime.now().strftime("%Y-%m-%d")
 
         sheet_name = _safe_sheet_name(target_date) or datetime.now().strftime("%Y-%m-%d")
         log_path = _resolve_appointments_path()
+
         row = [
             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            action,
-            patient_name or "",
-            patient_age_or_dob or "",
-            phone or "",
-            department_or_doctor or "",
-            reason or "",
-            preferred_date or "",
-            preferred_time or "",
-            visit_type or "",
-            existing_appointment or "",
-            notes or "",
+            _cell_text(action),
+            _cell_text(patient_name),
+            _cell_text(patient_age_or_dob),
+            phone_norm or _cell_text(phone),
+            _cell_text(department_or_doctor),
+            _cell_text(reason),
+            preferred_date_norm or _cell_text(preferred_date),
+            _cell_text(preferred_time),
+            _cell_text(visit_type),
+            existing_norm,
+            _cell_text(notes),
         ]
 
         with APPOINTMENT_LOG_LOCK:
             _append_row_to_workbook(log_path, sheet_name, row)
 
-        await params.result_callback(
-            {"status": "logged", "path": log_path, "sheet": sheet_name}
-        )
+        result = {"status": "logged", "path": log_path, "sheet": sheet_name}
+        await params.result_callback(result)
+        return result
 
-    tools = ToolsSchema(standard_tools=[close_session, log_appointment])
+    async def update_appointment(
+        params: FunctionCallParams,
+        action: str,
+        search_name: str | None = None,
+        search_phone: str | None = None,
+        search_date: str | None = None,
+        search_time: str | None = None,
+        patient_name: str | None = None,
+        patient_age_or_dob: str | None = None,
+        phone: str | None = None,
+        department_or_doctor: str | None = None,
+        reason: str | None = None,
+        preferred_date: str | None = None,
+        preferred_time: str | None = None,
+        visit_type: str | None = None,
+        existing_appointment: str | None = None,
+        notes: str | None = None,
+    ) -> dict:
+        if not search_name and patient_name:
+            search_name = patient_name
+        if not search_phone and phone:
+            search_phone = phone
+
+        if not any([search_name, search_phone, search_date, search_time]):
+            result = {"status": "missing_search"}
+            await params.result_callback(result)
+            return result
+
+        log_path = _resolve_appointments_path()
+        if not os.path.exists(log_path):
+            result = {"status": "not_found", "reason": "missing_workbook"}
+            await params.result_callback(result)
+            return result
+
+        search_phone_norm = _normalize_phone(search_phone)
+        search_date_norm = _normalize_date(search_date)
+        sheet_hint = _safe_sheet_name(search_date_norm) if search_date_norm else ""
+
+        action_value = _cell_text(action)
+        preferred_date_norm = _normalize_date(preferred_date)
+
+        with APPOINTMENT_LOG_LOCK:
+            workbook = load_workbook(log_path)
+
+            if sheet_hint and sheet_hint in workbook.sheetnames:
+                sheet_names = [sheet_hint] + [s for s in workbook.sheetnames if s != sheet_hint]
+            else:
+                sheet_names = workbook.sheetnames
+
+            candidates = []
+            for sheet_name in sheet_names:
+                sheet = workbook[sheet_name]
+                header_map = _ensure_sheet_headers(sheet)
+
+                for row_idx in range(2, sheet.max_row + 1):
+                    row_values = {
+                        header: sheet.cell(row=row_idx, column=col_idx).value
+                        for header, col_idx in header_map.items()
+                    }
+
+                    if not any(value not in (None, "") for value in row_values.values()):
+                        continue
+
+                    row_name = _cell_text(row_values.get("Patient Name"))
+                    row_phone = _normalize_phone(_cell_text(row_values.get("Phone")))
+                    row_pref_date = _cell_text(row_values.get("Preferred Date"))
+                    row_pref_time = _cell_text(row_values.get("Preferred Time"))
+                    row_existing = _cell_text(row_values.get("Existing Appointment"))
+
+                    if search_name and not _text_matches(search_name, row_name):
+                        continue
+                    if search_phone_norm and not _phone_matches(search_phone_norm, row_phone):
+                        continue
+                    if search_date and not (
+                        _date_matches(search_date, row_pref_date)
+                        or _date_matches(search_date, row_existing)
+                    ):
+                        continue
+                    if search_time and not (
+                        _time_matches(search_time, row_pref_time)
+                        or _time_matches(search_time, row_existing)
+                    ):
+                        continue
+
+                    candidates.append((sheet_name, row_idx, row_values))
+
+            if not candidates:
+                result = {"status": "not_found"}
+                await params.result_callback(result)
+                return result
+
+            if len(candidates) > 1 and (not search_date and not search_time):
+                result = {
+                    "status": "multiple_matches",
+                    "matches": [
+                        {
+                            "sheet": s,
+                            "row": r,
+                            "patient_name": _cell_text(v.get("Patient Name")),
+                            "phone": _cell_text(v.get("Phone")),
+                            "preferred_date": _cell_text(v.get("Preferred Date")),
+                            "preferred_time": _cell_text(v.get("Preferred Time")),
+                            "existing_appointment": _cell_text(v.get("Existing Appointment")),
+                        }
+                        for (s, r, v) in candidates[:10]
+                    ],
+                }
+                await params.result_callback(result)
+                return result
+
+            sheet_name, row_idx, row_values = candidates[0]
+            sheet = workbook[sheet_name]
+            header_map = _ensure_sheet_headers(sheet)
+
+            updated_values = dict(row_values)
+            updated_values["Action"] = action_value
+
+            if not existing_appointment and action_value.lower().startswith("resched"):
+                if not _cell_text(row_values.get("Existing Appointment")):
+                    snapshot_parts = [
+                        _cell_text(row_values.get("Preferred Date")),
+                        _cell_text(row_values.get("Preferred Time")),
+                    ]
+                    snapshot = " ".join([p for p in snapshot_parts if p])
+                    if snapshot:
+                        existing_appointment = snapshot
+
+            if patient_name:
+                updated_values["Patient Name"] = patient_name
+            if patient_age_or_dob:
+                updated_values["Patient Age or DOB"] = patient_age_or_dob
+            if phone:
+                updated_values["Phone"] = _normalize_phone(phone) or phone
+            if department_or_doctor:
+                updated_values["Department or Doctor"] = department_or_doctor
+            if reason:
+                updated_values["Reason"] = reason
+            if preferred_date:
+                updated_values["Preferred Date"] = preferred_date_norm or preferred_date
+            if preferred_time:
+                updated_values["Preferred Time"] = preferred_time
+            if visit_type:
+                updated_values["Visit Type"] = visit_type
+            if existing_appointment:
+                updated_values["Existing Appointment"] = existing_appointment
+            if notes:
+                updated_values["Notes"] = notes
+
+            new_sheet_name = sheet_name
+            moved = False
+
+            if preferred_date and action_value.lower().startswith("resched"):
+                new_sheet_name = _safe_sheet_name(preferred_date_norm) or sheet_name
+
+            if new_sheet_name != sheet_name:
+                target_sheet = (
+                    workbook[new_sheet_name]
+                    if new_sheet_name in workbook.sheetnames
+                    else workbook.create_sheet(new_sheet_name)
+                )
+                _ensure_sheet_headers(target_sheet)
+                target_row = [updated_values.get(header, "") for header in APPOINTMENTS_HEADERS]
+                target_sheet.append(target_row)
+                sheet.delete_rows(row_idx, 1)
+                moved = True
+            else:
+                for header, col_idx in header_map.items():
+                    if header == "Logged At":
+                        continue
+                    if header in updated_values and updated_values[header] is not None:
+                        sheet.cell(row=row_idx, column=col_idx).value = updated_values[header]
+
+            workbook.save(log_path)
+
+            result = {"status": "updated", "path": log_path, "sheet": new_sheet_name, "moved": moved}
+            await params.result_callback(result)
+            return result
+
+    tools = ToolsSchema(standard_tools=[close_session, log_appointment, update_appointment])
 
     context = LLMContext(
         [
@@ -457,14 +758,8 @@ async def run_bot(
     )
     context_aggregator = LLMContextAggregatorPair(context)
 
-    llm = OpenAILLMService(
-        api_key=openai_api_key,
-        # model="gpt-4.1-mini",   # optional (depends on your pipecat version)
-        # temperature=0.4,        # optional
-        # max_response_tokens=250 # optional
-    )
+    llm = OpenAILLMService(api_key=openai_api_key)
 
-    
     pipeline = Pipeline(
         [
             transport.input(),
@@ -477,9 +772,9 @@ async def run_bot(
         ]
     )
 
-    # Allow direct tool call
     llm.register_direct_function(close_session, cancel_on_interruption=False)
     llm.register_direct_function(log_appointment, cancel_on_interruption=False)
+    llm.register_direct_function(update_appointment, cancel_on_interruption=False)
 
     task = PipelineTask(
         pipeline,
@@ -492,7 +787,6 @@ async def run_bot(
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
         logger.info("Pipecat Client connected")
-        # Kick off the conversation:
         await task.queue_frames([LLMRunFrame()])
 
     @transport.event_handler("on_client_disconnected")

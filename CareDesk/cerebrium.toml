@@ -69,6 +69,7 @@ libgomp1 = "latest"
 uvicorn = "latest"
 python-dotenv = "latest"
 loguru = "latest"
+openpyxl = "latest"
 
 # Pipecat with Google + Silero + WebRTC
 "pipecat-ai[openai,deepgram,cartesia,silero,webrtc]" = "latest"
