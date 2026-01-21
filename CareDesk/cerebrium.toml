@@ -11,6 +11,7 @@ include = [
   "main.py",
   "bot.py",
   "nextgenswitch_serializer.py",
+  "transfer_call.py",
   "cerebrium.toml",
   "index.html",
   ".env"
@@ -70,6 +71,7 @@ uvicorn = "latest"
 python-dotenv = "latest"
 loguru = "latest"
 openpyxl = "latest"
+requests = "latest"
 
 # Pipecat with Google + Silero + WebRTC
 "pipecat-ai[openai,deepgram,cartesia,silero,webrtc]" = "latest"
