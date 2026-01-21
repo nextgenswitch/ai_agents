@@ -56,6 +56,7 @@ APPOINTMENTS_HEADERS = [
 ]
 
 APPOINTMENT_LOG_LOCK = threading.Lock()
+DEFAULT_APPOINTMENTS_SHEET = "Appointments"
 
 SYSTEM_INSTRUCTION = f"""
 You are a professional appointment booking receptionist for a medical clinic named "Info Diagnostic center".
@@ -264,6 +265,23 @@ def _normalize_date(value: str | None) -> str:
         pass
 
     return cleaned
+
+
+def _use_single_appointments_sheet() -> bool:
+    mode = os.getenv("APPOINTMENTS_SHEET_MODE", "single").strip().lower()
+    return mode not in {"per_date", "date", "dated"}
+
+
+def _appointments_sheet_name(preferred_date_norm: str, existing_norm: str) -> str:
+    if _use_single_appointments_sheet():
+        override = os.getenv("APPOINTMENTS_SHEET_NAME", DEFAULT_APPOINTMENTS_SHEET)
+        cleaned = _safe_sheet_name(override)
+        return cleaned or DEFAULT_APPOINTMENTS_SHEET
+
+    target_date = preferred_date_norm or _normalize_date(existing_norm)
+    if not target_date:
+        target_date = datetime.now().strftime("%Y-%m-%d")
+    return _safe_sheet_name(target_date) or datetime.now().strftime("%Y-%m-%d")
 
 
 def _normalize_time_bucket(value: str | None) -> str:
@@ -540,11 +558,7 @@ async def run_bot(
         existing_norm = _cell_text(existing_appointment)
         phone_norm = _normalize_phone(phone)
 
-        target_date = preferred_date_norm or _normalize_date(existing_norm)
-        if not target_date:
-            target_date = datetime.now().strftime("%Y-%m-%d")
-
-        sheet_name = _safe_sheet_name(target_date) or datetime.now().strftime("%Y-%m-%d")
+        sheet_name = _appointments_sheet_name(preferred_date_norm, existing_norm)
         log_path = _resolve_appointments_path()
 
         row = [
@@ -562,8 +576,19 @@ async def run_bot(
             _cell_text(notes),
         ]
 
-        with APPOINTMENT_LOG_LOCK:
-            _append_row_to_workbook(log_path, sheet_name, row)
+        try:
+            with APPOINTMENT_LOG_LOCK:
+                _append_row_to_workbook(log_path, sheet_name, row)
+        except PermissionError as exc:
+            logger.exception("Appointment log write blocked (file locked): {}", log_path)
+            result = {"status": "error", "reason": "file_locked", "path": log_path}
+            await params.result_callback(result)
+            return result
+        except Exception as exc:
+            logger.exception("Appointment log write failed: {}", log_path)
+            result = {"status": "error", "reason": "write_failed", "path": log_path}
+            await params.result_callback(result)
+            return result
 
         result = {"status": "logged", "path": log_path, "sheet": sheet_name}
         await params.result_callback(result)
@@ -605,7 +630,10 @@ async def run_bot(
 
         search_phone_norm = _normalize_phone(search_phone)
         search_date_norm = _normalize_date(search_date)
-        sheet_hint = _safe_sheet_name(search_date_norm) if search_date_norm else ""
+        if _use_single_appointments_sheet():
+            sheet_hint = _appointments_sheet_name(search_date_norm, "")
+        else:
+            sheet_hint = _safe_sheet_name(search_date_norm) if search_date_norm else ""
 
         action_value = _cell_text(action)
         preferred_date_norm = _normalize_date(preferred_date)
@@ -720,8 +748,9 @@ async def run_bot(
             new_sheet_name = sheet_name
             moved = False
 
-            if preferred_date and action_value.lower().startswith("resched"):
-                new_sheet_name = _safe_sheet_name(preferred_date_norm) or sheet_name
+            if not _use_single_appointments_sheet():
+                if preferred_date and action_value.lower().startswith("resched"):
+                    new_sheet_name = _safe_sheet_name(preferred_date_norm) or sheet_name
 
             if new_sheet_name != sheet_name:
                 target_sheet = (
