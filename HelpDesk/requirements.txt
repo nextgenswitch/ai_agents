@@ -1,0 +1,6 @@
+python-dotenv
+fastapi[all]
+uvicorn
+requests
+pipecat-ai[openai,deepgram,elevenlabs,silero,webrtc]>=0.0.99
+openpyxl
