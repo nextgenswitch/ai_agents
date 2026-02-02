@@ -563,7 +563,7 @@ async def run_bot(
     deepgram_api_key = os.getenv("DEEPGRAM_API_KEY")
     cartesia_api_key = os.getenv("CARTESIA_API_KEY")
     elevenlabs_api_key = os.getenv("ELEVENLABS_API_KEY")
-    elevenlabs_voice_id = os.getenv("ELEVENLABS_VOICE_ID", )
+    elevenlabs_voice_id = os.getenv("ELEVENLABS_VOICE_ID", "EST9Ui6982FZPSi7gCHi")
     cartesia_voice_id = os.getenv(
         "CARTESIA_VOICE_ID", "5ee9feff-1265-424a-9d7f-8e4d431a12c7"
     )
@@ -608,8 +608,8 @@ async def run_bot(
     # tts = CartesiaTTSService(api_key=cartesia_api_key, voice_id=cartesia_voice_id)
     # tts = DeepgramTTSService(api_key=deepgram_api_key, voice="aura-2-athena-en")
     tts = ElevenLabsTTSService(
-        api_key=os.getenv("ELEVENLABS_API_KEY", ""),
-        voice_id=os.getenv("ELEVENLABS_VOICE_ID", ""),
+        api_key=elevenlabs_api_key,
+        voice_id=elevenlabs_voice_id,
     )
 
     async def close_session(params: FunctionCallParams) -> dict:

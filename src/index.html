@@ -1,0 +1,1485 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NextGenSwitch - AI Voice Agents</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-primary: #0a0a0f;
+        --bg-card: #12121a;
+        --bg-card-hover: #1a1a24;
+        --bg-panel: #16161f;
+        --text-primary: #ffffff;
+        --text-secondary: #8b8b9e;
+        --text-muted: #5a5a6e;
+        --accent: #6366f1;
+        --accent-light: #818cf8;
+        --accent-glow: rgba(99, 102, 241, 0.3);
+        --success: #10b981;
+        --success-glow: rgba(16, 185, 129, 0.3);
+        --danger: #ef4444;
+        --border: rgba(255, 255, 255, 0.08);
+        --border-light: rgba(255, 255, 255, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          "Inter",
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        min-height: 100vh;
+        line-height: 1.5;
+      }
+
+      .app {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+        display: grid;
+        grid-template-columns: 1fr 400px;
+        gap: 2rem;
+        min-height: 100vh;
+      }
+
+      /* Left Column - Agent Selection */
+      .agents-section {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .section-header {
+        margin-bottom: 2rem;
+      }
+
+      .section-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .section-header p {
+        color: var(--text-secondary);
+        font-size: 1rem;
+      }
+
+      .agents-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.25rem;
+      }
+
+      .agent-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 1.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .agent-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--accent), var(--accent-light));
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .agent-card:hover {
+        background: var(--bg-card-hover);
+        border-color: var(--border-light);
+        transform: translateY(-2px);
+      }
+
+      .agent-card:hover::before {
+        opacity: 1;
+      }
+
+      .agent-card.selected {
+        border-color: var(--accent);
+        box-shadow:
+          0 0 0 1px var(--accent),
+          0 8px 32px var(--accent-glow);
+      }
+
+      .agent-card.selected::before {
+        opacity: 1;
+      }
+
+      .agent-card-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .agent-logo {
+        width: 52px;
+        height: 52px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+      }
+
+      .agent-logo.receptionist {
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      }
+      .agent-logo.helpdesk {
+        background: linear-gradient(135deg, #f59e0b, #f97316);
+      }
+      .agent-logo.caredesk {
+        background: linear-gradient(135deg, #ec4899, #f43f5e);
+      }
+      .agent-logo.sales {
+        background: linear-gradient(135deg, #10b981, #14b8a6);
+      }
+
+      .agent-info h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+      }
+
+      .agent-info .agent-tag {
+        font-size: 0.75rem;
+        color: var(--accent-light);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 500;
+      }
+
+      .agent-description {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        line-height: 1.6;
+      }
+
+      .agent-card .select-indicator {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 2px solid var(--border-light);
+        transition: all 0.2s ease;
+      }
+
+      .agent-card.selected .select-indicator {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .agent-card.selected .select-indicator::after {
+        content: "✓";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 0.7rem;
+        font-weight: bold;
+      }
+
+      /* Right Column - Bot Panel */
+      .bot-panel {
+        background: var(--bg-panel);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 4rem);
+        position: sticky;
+        top: 2rem;
+      }
+
+      .bot-panel-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .bot-panel-header h2 {
+        font-size: 1rem;
+        font-weight: 600;
+      }
+
+      .connection-status {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--text-muted);
+      }
+
+      .status-dot.connecting {
+        background: #f59e0b;
+        animation: blink 1s infinite;
+      }
+
+      .status-dot.connected {
+        background: var(--success);
+        box-shadow: 0 0 8px var(--success-glow);
+      }
+
+      .bot-conversation {
+        flex: 1;
+        padding: 1.5rem;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        scrollbar-width: thin;
+        scrollbar-color: var(--text-muted) transparent;
+      }
+
+      .bot-conversation::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .bot-conversation::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .bot-conversation::-webkit-scrollbar-thumb {
+        background-color: var(--text-muted);
+        border-radius: 3px;
+      }
+
+      .bot-conversation::-webkit-scrollbar-thumb:hover {
+        background-color: var(--text-secondary);
+      }
+
+      .conversation-placeholder {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: var(--text-muted);
+      }
+
+      .conversation-placeholder .icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: var(--bg-card);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+        font-size: 1.5rem;
+      }
+
+      .conversation-placeholder p {
+        font-size: 0.875rem;
+        max-width: 200px;
+      }
+
+      .bot-message,
+      .user-message {
+        max-width: 85%;
+        padding: 0.875rem 1rem;
+        border-radius: 16px;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        animation: slideIn 0.3s ease;
+      }
+
+      .bot-message {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        align-self: flex-start;
+        border-bottom-left-radius: 4px;
+      }
+
+      .bot-message.interim {
+        opacity: 0.7;
+        border-style: dashed;
+      }
+
+      .user-message {
+        background: var(--accent);
+        color: white;
+        align-self: flex-end;
+        border-bottom-right-radius: 4px;
+      }
+
+      .user-message.interim {
+        opacity: 0.7;
+        background: rgba(99, 102, 241, 0.6);
+      }
+
+      .message-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+        opacity: 0.7;
+      }
+
+      .bot-message .message-label {
+        color: var(--accent-light);
+      }
+
+      .user-message .message-label {
+        color: rgba(255, 255, 255, 0.8);
+      }
+
+      .typing-indicator {
+        display: flex;
+        gap: 4px;
+        padding: 1rem;
+        align-self: flex-start;
+      }
+
+      .typing-indicator span {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--text-muted);
+        animation: bounce 1.4s infinite ease-in-out both;
+      }
+
+      .typing-indicator span:nth-child(1) {
+        animation-delay: -0.32s;
+      }
+      .typing-indicator span:nth-child(2) {
+        animation-delay: -0.16s;
+      }
+
+      .bot-panel-footer {
+        padding: 1.5rem;
+        border-top: 1px solid var(--border);
+      }
+
+      .connect-btn {
+        width: 100%;
+        padding: 1rem 1.5rem;
+        border: none;
+        border-radius: 12px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+      }
+
+      .connect-btn.start {
+        background: linear-gradient(135deg, var(--accent), var(--accent-light));
+        color: white;
+      }
+
+      .connect-btn.start:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 24px var(--accent-glow);
+      }
+
+      .connect-btn.stop {
+        background: var(--danger);
+        color: white;
+      }
+
+      .connect-btn.stop:hover {
+        background: #dc2626;
+      }
+
+      .connect-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .connect-btn svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      /* Audio Visualizer */
+      .audio-visualizer {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        height: 40px;
+        margin-bottom: 1rem;
+      }
+
+      .audio-bar {
+        width: 4px;
+        height: 8px;
+        background: var(--accent);
+        border-radius: 2px;
+        transition: height 0.1s ease;
+      }
+
+      .audio-visualizer.active .audio-bar {
+        animation: audioWave 0.5s ease infinite;
+      }
+
+      .audio-visualizer.active .audio-bar:nth-child(1) {
+        animation-delay: 0s;
+      }
+      .audio-visualizer.active .audio-bar:nth-child(2) {
+        animation-delay: 0.1s;
+      }
+      .audio-visualizer.active .audio-bar:nth-child(3) {
+        animation-delay: 0.2s;
+      }
+      .audio-visualizer.active .audio-bar:nth-child(4) {
+        animation-delay: 0.3s;
+      }
+      .audio-visualizer.active .audio-bar:nth-child(5) {
+        animation-delay: 0.4s;
+      }
+
+      @keyframes audioWave {
+        0%,
+        100% {
+          height: 8px;
+        }
+        50% {
+          height: 32px;
+        }
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes blink {
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      @keyframes bounce {
+        0%,
+        80%,
+        100% {
+          transform: scale(0);
+        }
+        40% {
+          transform: scale(1);
+        }
+      }
+
+      /* Responsive */
+      @media (max-width: 1024px) {
+        .app {
+          grid-template-columns: 1fr;
+        }
+
+        .bot-panel {
+          height: 500px;
+          position: relative;
+          top: 0;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .app {
+          padding: 1rem;
+        }
+
+        .agents-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Create Agent Card */
+      .agent-card.create-card {
+        border: 2px dashed var(--border-light);
+        background: transparent;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 180px;
+        gap: 1rem;
+      }
+
+      .agent-card.create-card:hover {
+        border-color: var(--accent);
+        background: rgba(99, 102, 241, 0.05);
+      }
+
+      .agent-card.create-card .create-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 12px;
+        background: var(--bg-card);
+        border: 2px dashed var(--border-light);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-muted);
+        transition: all 0.3s ease;
+      }
+
+      .agent-card.create-card:hover .create-icon {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .agent-card.create-card .create-text {
+        color: var(--text-muted);
+        font-weight: 500;
+        transition: color 0.3s ease;
+      }
+
+      .agent-card.create-card:hover .create-text {
+        color: var(--accent);
+      }
+
+      /* Modal Styles */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+      }
+
+      .modal-overlay.active {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .modal {
+        background: var(--bg-panel);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        width: 100%;
+        max-width: 560px;
+        max-height: 90vh;
+        overflow-y: auto;
+        transform: scale(0.9) translateY(20px);
+        transition: transform 0.3s ease;
+        scrollbar-width: thin;
+        scrollbar-color: var(--text-muted) transparent;
+      }
+
+      .modal::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .modal::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .modal::-webkit-scrollbar-thumb {
+        background-color: var(--text-muted);
+        border-radius: 3px;
+      }
+
+      .modal-overlay.active .modal {
+        transform: scale(1) translateY(0);
+      }
+
+      .modal-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .modal-header h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+      }
+
+      .modal-close {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        border: none;
+        background: var(--bg-card);
+        color: var(--text-secondary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+      }
+
+      .modal-close:hover {
+        background: var(--bg-card-hover);
+        color: var(--text-primary);
+      }
+
+      .modal-body {
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .form-group label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+      }
+
+      .form-group input,
+      .form-group select,
+      .form-group textarea {
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--bg-card);
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        font-family: inherit;
+        transition: all 0.2s ease;
+      }
+
+      .form-group input:focus,
+      .form-group select:focus,
+      .form-group textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-glow);
+      }
+
+      .form-group textarea {
+        resize: vertical;
+        min-height: 100px;
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+      }
+
+      .modal-footer {
+        padding: 1.5rem;
+        border-top: 1px solid var(--border);
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+      }
+
+      .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        border: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .btn-secondary {
+        background: var(--bg-card);
+        color: var(--text-primary);
+        border: 1px solid var(--border);
+      }
+
+      .btn-secondary:hover {
+        background: var(--bg-card-hover);
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, var(--accent), var(--accent-light));
+        color: white;
+      }
+
+      .btn-primary:hover {
+        box-shadow: 0 4px 16px var(--accent-glow);
+      }
+
+      .btn-primary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .field-error {
+        color: #ef4444;
+        font-size: 0.75rem;
+        margin-top: 0.35rem;
+        display: none;
+      }
+
+      .field-error.visible {
+        display: block;
+      }
+
+      .modal input.error,
+      .modal textarea.error {
+        border-color: #ef4444 !important;
+      }
+
+      /* Color options for agent logos */
+      .agent-logo.purple {
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      }
+      .agent-logo.orange {
+        background: linear-gradient(135deg, #f59e0b, #f97316);
+      }
+      .agent-logo.pink {
+        background: linear-gradient(135deg, #ec4899, #f43f5e);
+      }
+      .agent-logo.green {
+        background: linear-gradient(135deg, #10b981, #14b8a6);
+      }
+      .agent-logo.blue {
+        background: linear-gradient(135deg, #3b82f6, #06b6d4);
+      }
+      .agent-logo.red {
+        background: linear-gradient(135deg, #ef4444, #f97316);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <section class="agents-section">
+        <header class="section-header">
+          <h1><a href="https://nextgenswitch.com">NextGenSwitch</a></h1>
+          <p>Select an agent and start a conversation</p>
+        </header>
+
+        <div class="agents-grid" id="agents-grid">
+          <!-- Create New Agent Card -->
+          <div class="agent-card create-card" id="create-agent-card">
+            <div class="create-icon">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </div>
+            <span class="create-text">Create New Agent</span>
+          </div>
+          <!-- Agent cards will be loaded dynamically -->
+        </div>
+      </section>
+
+      <aside class="bot-panel">
+        <header class="bot-panel-header">
+          <h2 id="panel-title">Receptionist</h2>
+          <div class="connection-status">
+            <div id="status-dot" class="status-dot"></div>
+            <span id="status-text">Ready</span>
+          </div>
+        </header>
+
+        <div class="bot-conversation" id="conversation">
+          <div class="conversation-placeholder" id="placeholder">
+            <div class="icon">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"
+                ></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+            </div>
+            <p>Click the button below to start talking with the agent</p>
+          </div>
+        </div>
+
+        <footer class="bot-panel-footer">
+          <div class="audio-visualizer" id="visualizer">
+            <div class="audio-bar"></div>
+            <div class="audio-bar"></div>
+            <div class="audio-bar"></div>
+            <div class="audio-bar"></div>
+            <div class="audio-bar"></div>
+          </div>
+          <button id="connect-btn" class="connect-btn start">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+              <line x1="12" y1="19" x2="12" y2="23" />
+              <line x1="8" y1="23" x2="16" y2="23" />
+            </svg>
+            <span id="btn-text">Start Conversation</span>
+          </button>
+        </footer>
+      </aside>
+    </div>
+
+    <!-- Create Agent Modal -->
+    <div class="modal-overlay" id="agent-modal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Create New Agent</h2>
+          <button class="modal-close" id="modal-close">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="agent-name">Agent Name *</label>
+            <input
+              type="text"
+              id="agent-name"
+              placeholder="e.g., Customer Support"
+            />
+            <span class="field-error" id="error-name"
+              >Agent name is required</span
+            >
+          </div>
+          <div class="form-group">
+            <label for="agent-description">Description</label>
+            <input
+              type="text"
+              id="agent-description"
+              placeholder="Brief description of the agent's role"
+            />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="llm-provider">LLM Provider</label>
+              <select id="llm-provider">
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="google">Google</option>
+                <option value="groq">Groq</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="stt-provider">STT Provider</label>
+              <select id="stt-provider">
+                <option value="deepgram">Deepgram</option>
+                <option value="openai">OpenAI</option>
+                <option value="google">Google</option>
+                <option value="azure">Azure</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="tts-provider">TTS Provider</label>
+              <select id="tts-provider">
+                <option value="deepgram">Deepgram</option>
+                <option value="elevenlabs">ElevenLabs</option>
+                <option value="openai">OpenAI</option>
+                <option value="cartesia">Cartesia</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="agent-prompt">System Prompt *</label>
+            <textarea
+              id="agent-prompt"
+              placeholder="Define the agent's personality, role, and behavior..."
+            ></textarea>
+            <span class="field-error" id="error-prompt"
+              >System prompt is required</span
+            >
+          </div>
+          <div class="form-group">
+            <label for="agent-greeting">Greeting Message *</label>
+            <textarea
+              id="agent-greeting"
+              placeholder="The first message the agent will say when a call starts..."
+              style="min-height: 60px"
+            ></textarea>
+            <span class="field-error" id="error-greeting"
+              >Greeting message is required</span
+            >
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
+          <button class="btn btn-primary" id="modal-save">Create Agent</button>
+        </div>
+      </div>
+    </div>
+
+    <audio id="audio-el" autoplay playsinline></audio>
+
+    <script>
+      // DOM Elements
+      const agentsGrid = document.getElementById("agents-grid");
+      const createAgentCard = document.getElementById("create-agent-card");
+      const panelTitle = document.getElementById("panel-title");
+      const statusDot = document.getElementById("status-dot");
+      const statusText = document.getElementById("status-text");
+      const connectBtn = document.getElementById("connect-btn");
+      const btnText = document.getElementById("btn-text");
+      const conversation = document.getElementById("conversation");
+      const placeholder = document.getElementById("placeholder");
+      const visualizer = document.getElementById("visualizer");
+      const audioEl = document.getElementById("audio-el");
+
+      // Modal Elements
+      const modal = document.getElementById("agent-modal");
+      const modalClose = document.getElementById("modal-close");
+      const modalCancel = document.getElementById("modal-cancel");
+      const modalSave = document.getElementById("modal-save");
+
+      // State
+      let agents = [];
+      let activeAgent = null;
+      let activeAgentData = null;
+      let connected = false;
+      let connecting = false;
+      let peerConnection = null;
+      let localStream = null;
+      let dataChannel = null;
+      let currentUserMessage = null;
+      let currentBotMessage = null;
+      let botTextBuffer = "";
+      let botFinalizeTimeout = null;
+
+      // SVG Icons for agents
+      const icons = {
+        microphone:
+          '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>',
+        wrench:
+          '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>',
+        heart:
+          '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>',
+        briefcase:
+          '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>',
+        headphones:
+          '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>',
+        user: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>',
+      };
+
+      // Load agents from API
+      async function loadAgents() {
+        try {
+          const response = await fetch("/api/agents");
+          agents = await response.json();
+          renderAgentCards();
+        } catch (err) {
+          console.error("Failed to load agents:", err);
+        }
+      }
+
+      // Render agent cards
+      function renderAgentCards() {
+        // Remove existing agent cards (keep create card)
+        const existingCards = agentsGrid.querySelectorAll(
+          ".agent-card:not(.create-card)",
+        );
+        existingCards.forEach((card) => card.remove());
+
+        // Add agent cards
+        agents.forEach((agent, index) => {
+          const card = createAgentCardElement(agent, index === 0);
+          agentsGrid.appendChild(card);
+        });
+
+        // Select first agent if none selected
+        if (agents.length > 0 && !activeAgent) {
+          selectAgent(agents[0]);
+        }
+      }
+
+      // Create agent card element
+      function createAgentCardElement(agent, isSelected = false) {
+        const card = document.createElement("div");
+        card.className = `agent-card${isSelected ? " selected" : ""}`;
+        card.dataset.agent = agent.id;
+
+        const icon = icons[agent.icon] || icons.user;
+        const color = agent.color || "purple";
+
+        card.innerHTML = `
+                <div class="select-indicator"></div>
+                <div class="agent-card-header">
+                    <div class="agent-logo ${color}">${icon}</div>
+                    <div class="agent-info">
+                        <h3>${agent.name}</h3>
+                        <span class="agent-tag">AI Agent</span>
+                    </div>
+                </div>
+                <p class="agent-description">${agent.description || "Custom AI voice agent"}</p>
+            `;
+
+        // Click to select
+        card.addEventListener("click", () => {
+          if (connected || connecting) return;
+          selectAgent(agent);
+        });
+
+        return card;
+      }
+
+      // Select an agent
+      function selectAgent(agent) {
+        activeAgent = agent.id;
+        activeAgentData = agent;
+        panelTitle.textContent = agent.name;
+
+        // Update card selection
+        const allCards = agentsGrid.querySelectorAll(
+          ".agent-card:not(.create-card)",
+        );
+        allCards.forEach((c) => c.classList.remove("selected"));
+        const selectedCard = agentsGrid.querySelector(
+          `[data-agent="${agent.id}"]`,
+        );
+        if (selectedCard) selectedCard.classList.add("selected");
+      }
+
+      // Modal functions
+      function openModal() {
+        modal.classList.add("active");
+        document.getElementById("agent-name").focus();
+      }
+
+      function closeModal() {
+        modal.classList.remove("active");
+        clearModalForm();
+      }
+
+      function clearModalForm() {
+        document.getElementById("agent-name").value = "";
+        document.getElementById("agent-description").value = "";
+        document.getElementById("agent-prompt").value = "";
+        document.getElementById("agent-greeting").value = "";
+        document.getElementById("llm-provider").value = "openai";
+        document.getElementById("stt-provider").value = "deepgram";
+        document.getElementById("tts-provider").value = "deepgram";
+        clearValidationErrors();
+      }
+
+      function clearValidationErrors() {
+        document
+          .querySelectorAll(".field-error")
+          .forEach((el) => el.classList.remove("visible"));
+        document
+          .querySelectorAll(".form-input.error")
+          .forEach((el) => el.classList.remove("error"));
+      }
+
+      function showFieldError(fieldId, errorId) {
+        document.getElementById(fieldId).classList.add("error");
+        document.getElementById(errorId).classList.add("visible");
+      }
+
+      async function saveAgent() {
+        const name = document.getElementById("agent-name").value.trim();
+        const description = document
+          .getElementById("agent-description")
+          .value.trim();
+        const prompt = document.getElementById("agent-prompt").value.trim();
+        const greeting = document.getElementById("agent-greeting").value.trim();
+        const llm = document.getElementById("llm-provider").value;
+        const stt = document.getElementById("stt-provider").value;
+        const tts = document.getElementById("tts-provider").value;
+
+        clearValidationErrors();
+        let hasError = false;
+
+        if (!name) {
+          showFieldError("agent-name", "error-name");
+          hasError = true;
+        }
+        if (!prompt) {
+          showFieldError("agent-prompt", "error-prompt");
+          hasError = true;
+        }
+        if (!greeting) {
+          showFieldError("agent-greeting", "error-greeting");
+          hasError = true;
+        }
+
+        if (hasError) return;
+
+        modalSave.disabled = true;
+        modalSave.textContent = "Creating...";
+
+        try {
+          const response = await fetch("/api/agents", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name,
+              description,
+              prompt,
+              greeting_message: greeting,
+              llm_provider: llm,
+              stt_provider: stt,
+              tts_provider: tts,
+              icon: "user",
+              color: ["purple", "orange", "pink", "green", "blue"][
+                Math.floor(Math.random() * 5)
+              ],
+            }),
+          });
+
+          if (response.ok) {
+            const newAgent = await response.json();
+            closeModal();
+            await loadAgents();
+            selectAgent(newAgent);
+          }
+        } catch (err) {
+          console.error("Failed to save agent:", err);
+        } finally {
+          modalSave.disabled = false;
+          modalSave.textContent = "Create Agent";
+        }
+      }
+
+      // Modal event listeners
+      createAgentCard.addEventListener("click", openModal);
+      modalClose.addEventListener("click", closeModal);
+      modalCancel.addEventListener("click", closeModal);
+      modalSave.addEventListener("click", saveAgent);
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) closeModal();
+      });
+
+      // WebRTC Connection
+      const sendIceCandidate = async (pc, candidate) => {
+        await fetch("api/offer", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pc_id: pc.pc_id,
+            candidates: [
+              {
+                candidate: candidate.candidate,
+                sdp_mid: candidate.sdpMid,
+                sdp_mline_index: candidate.sdpMLineIndex,
+              },
+            ],
+          }),
+        });
+      };
+
+      const createConnection = async (audioTrack) => {
+        const pc = new RTCPeerConnection({
+          iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+        });
+
+        pc.pendingIceCandidates = [];
+        pc.canSendIceCandidates = false;
+
+        pc.onconnectionstatechange = () => {
+          const state = pc?.connectionState;
+          if (state === "connected") updateUI("connected");
+          else if (["disconnected", "failed", "closed"].includes(state))
+            disconnect();
+        };
+
+        pc.onicecandidate = async (event) => {
+          if (event.candidate) {
+            if (pc.canSendIceCandidates && pc.pc_id) {
+              await sendIceCandidate(pc, event.candidate);
+            } else {
+              pc.pendingIceCandidates.push(event.candidate);
+            }
+          }
+        };
+
+        dataChannel = pc.createDataChannel("chat", { ordered: true });
+        dataChannel.onmessage = handleTranscriptMessage;
+        dataChannel.onopen = () => console.log("Data channel open");
+        dataChannel.onclose = () => console.log("Data channel closed");
+        dataChannel.onerror = (e) => console.error("Data channel error:", e);
+
+        pc.ondatachannel = (event) => {
+          const serverChannel = event.channel;
+          serverChannel.onmessage = handleTranscriptMessage;
+        };
+
+        pc.ontrack = (e) => (audioEl.srcObject = e.streams[0]);
+        pc.addTransceiver(audioTrack, { direction: "sendrecv" });
+        pc.addTransceiver("video", { direction: "sendrecv" });
+
+        await pc.setLocalDescription(await pc.createOffer());
+
+        // Only send agent ID - server will load config from agent.json
+        const params = new URLSearchParams({ agent: activeAgent });
+
+        const response = await fetch(`api/offer?${params.toString()}`, {
+          body: JSON.stringify({
+            sdp: pc.localDescription.sdp,
+            type: pc.localDescription.type,
+          }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+
+        const answer = await response.json();
+        pc.pc_id = answer.pc_id;
+        await pc.setRemoteDescription(answer);
+
+        pc.canSendIceCandidates = true;
+        for (const candidate of pc.pendingIceCandidates) {
+          await sendIceCandidate(pc, candidate);
+        }
+        pc.pendingIceCandidates = [];
+
+        return pc;
+      };
+
+      const updateUI = (state) => {
+        statusDot.className = "status-dot";
+        connectBtn.className = "connect-btn";
+        visualizer.classList.remove("active");
+
+        const isLocked = state === "connected" || state === "connecting";
+        const allCards = agentsGrid.querySelectorAll(".agent-card");
+        allCards.forEach((c) => {
+          c.style.pointerEvents = isLocked ? "none" : "auto";
+          c.style.opacity = isLocked ? "0.6" : "1";
+        });
+
+        switch (state) {
+          case "connected":
+            statusDot.classList.add("connected");
+            statusText.textContent = "Live";
+            connectBtn.classList.add("stop");
+            btnText.textContent = "End Conversation";
+            connectBtn.disabled = false;
+            visualizer.classList.add("active");
+            placeholder.style.display = "none";
+            break;
+
+          case "connecting":
+            statusDot.classList.add("connecting");
+            statusText.textContent = "Connecting...";
+            connectBtn.disabled = true;
+            btnText.textContent = "Connecting...";
+            break;
+
+          case "disconnected":
+          default:
+            statusText.textContent = "Ready";
+            connectBtn.classList.add("start");
+            btnText.textContent = "Start Conversation";
+            connectBtn.disabled = false;
+            break;
+        }
+
+        connecting = state === "connecting";
+        connected = state === "connected";
+      };
+
+      const handleTranscriptMessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "transcript") {
+            if (data.role === "user") {
+              handleUserTranscript(data.text, data.final);
+            } else if (data.role === "bot") {
+              handleBotTranscript(data.text, data.final);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to parse transcript:", e);
+        }
+      };
+
+      const handleUserTranscript = (text, isFinal) => {
+        if (!text) return;
+        if (isFinal) {
+          if (currentUserMessage) currentUserMessage.remove();
+          addMessage("user", text, false);
+          currentUserMessage = null;
+        } else {
+          if (!currentUserMessage) {
+            currentUserMessage = addMessage("user", text, true);
+          } else {
+            const textEl = currentUserMessage.querySelector(".message-text");
+            if (textEl) textEl.textContent = text;
+          }
+        }
+      };
+
+      const handleBotTranscript = (text, isFinal) => {
+        if (!text) return;
+        botTextBuffer += text;
+        if (!currentBotMessage) {
+          currentBotMessage = addMessage("bot", botTextBuffer, true);
+        } else {
+          const textEl = currentBotMessage.querySelector(".message-text");
+          if (textEl) textEl.textContent = botTextBuffer;
+        }
+        conversation.scrollTop = conversation.scrollHeight;
+        clearTimeout(botFinalizeTimeout);
+        botFinalizeTimeout = setTimeout(finalizeBotMessage, 1500);
+      };
+
+      const finalizeBotMessage = () => {
+        if (currentBotMessage && botTextBuffer) {
+          currentBotMessage.classList.remove("interim");
+          currentBotMessage = null;
+          botTextBuffer = "";
+        }
+      };
+
+      const addMessage = (type, text, isInterim = false) => {
+        const msg = document.createElement("div");
+        msg.className = type === "bot" ? "bot-message" : "user-message";
+        if (isInterim) msg.classList.add("interim");
+
+        const label = document.createElement("div");
+        label.className = "message-label";
+        label.textContent = type === "bot" ? "Assistant" : "You";
+
+        const textEl = document.createElement("div");
+        textEl.className = "message-text";
+        textEl.textContent = text;
+
+        msg.appendChild(label);
+        msg.appendChild(textEl);
+        conversation.appendChild(msg);
+        conversation.scrollTop = conversation.scrollHeight;
+
+        return msg;
+      };
+
+      const connect = async () => {
+        if (!activeAgent) return;
+        updateUI("connecting");
+        conversation.innerHTML = "";
+        conversation.appendChild(placeholder);
+        placeholder.style.display = "flex";
+        currentUserMessage = null;
+        currentBotMessage = null;
+        botTextBuffer = "";
+
+        try {
+          localStream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+          peerConnection = await createConnection(
+            localStream.getAudioTracks()[0],
+          );
+        } catch (err) {
+          console.error("Connection failed:", err);
+          disconnect();
+        }
+      };
+
+      const disconnect = () => {
+        if (peerConnection) {
+          peerConnection.close();
+          peerConnection = null;
+        }
+        if (localStream) {
+          localStream.getTracks().forEach((track) => track.stop());
+          localStream = null;
+        }
+        if (dataChannel) {
+          dataChannel.close();
+          dataChannel = null;
+        }
+        clearTimeout(botFinalizeTimeout);
+        finalizeBotMessage();
+        currentUserMessage = null;
+        updateUI("disconnected");
+      };
+
+      connectBtn.addEventListener("click", () => {
+        if (connecting) return;
+        connected ? disconnect() : connect();
+      });
+
+      // Initialize
+      loadAgents();
+    </script>
+  </body>
+</html>

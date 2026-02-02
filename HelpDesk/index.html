@@ -3,21 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CareDesk Medical Help Center</title>
+    <title>HelpDesk Support Ticket Bot</title>
     <style>
-      @import url("https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Spectral:wght@600;700&display=swap");
 
       :root {
-        --bg: #f4f8fb;
-        --surface: #ffffff;
-        --ink: #0f1b2b;
-        --muted: #4d5b6b;
-        --primary: #1b7f7a;
-        --primary-2: #2f5d9f;
-        --accent: #f25f5c;
-        --line: rgba(15, 27, 43, 0.12);
-        --shadow-soft: 0 22px 50px rgba(22, 40, 56, 0.16);
-        --shadow-tight: 0 10px 26px rgba(22, 40, 56, 0.12);
+        color-scheme: light;
+        --bg: #eef2f7;
+        --bg-2: #e6ecf5;
+        --panel: #ffffff;
+        --panel-strong: #0e1a28;
+        --ink: #0d1b2a;
+        --muted: #4b5b70;
+        --accent: #2f6fed;
+        --accent-2: #0ea5a4;
+        --accent-3: #f97316;
+        --line: rgba(10, 28, 46, 0.1);
+        --shadow: 0 22px 40px rgba(15, 32, 54, 0.12);
+        --shadow-strong: 0 32px 60px rgba(7, 16, 28, 0.35);
+        --radius: 18px;
       }
 
       * {
@@ -27,20 +31,20 @@
       body {
         margin: 0;
         min-height: 100vh;
-        font-family: "Manrope", sans-serif;
+        font-family: "Space Grotesk", sans-serif;
         color: var(--ink);
         background:
           radial-gradient(
-            70% 60% at 10% 10%,
-            rgba(27, 127, 122, 0.14),
-            transparent 65%
-          ),
-          radial-gradient(
-            60% 70% at 95% 0%,
-            rgba(47, 93, 159, 0.12),
+            40% 45% at 10% 0%,
+            rgba(47, 111, 237, 0.16),
             transparent 60%
           ),
-          linear-gradient(180deg, #f9fcff 0%, #eef3f8 100%);
+          radial-gradient(
+            35% 40% at 90% 12%,
+            rgba(14, 165, 164, 0.16),
+            transparent 60%
+          ),
+          linear-gradient(160deg, var(--bg) 0%, #f5f7fb 45%, var(--bg-2) 100%);
         position: relative;
         overflow-x: hidden;
       }
@@ -48,52 +52,73 @@
       body::before {
         content: "";
         position: fixed;
-        inset: -30% -10% auto -10%;
-        height: 70vh;
+        inset: 0;
         background-image:
-          linear-gradient(90deg, rgba(15, 27, 43, 0.03) 1px, transparent 1px),
-          linear-gradient(rgba(15, 27, 43, 0.03) 1px, transparent 1px);
-        background-size: 48px 48px;
+          linear-gradient(120deg, rgba(255, 255, 255, 0.7), transparent 45%),
+          radial-gradient(
+            circle at 15% 18%,
+            rgba(255, 255, 255, 0.8),
+            transparent 45%
+          );
+        opacity: 0.7;
+        z-index: -2;
+      }
+
+      body::after {
+        content: "";
+        position: fixed;
+        right: -140px;
+        top: 120px;
+        width: 320px;
+        height: 320px;
+        background: radial-gradient(
+          circle,
+          rgba(47, 111, 237, 0.2),
+          transparent 70%
+        );
         z-index: -1;
       }
 
       .page {
+        max-width: 1180px;
+        margin: 0 auto;
         display: flex;
         flex-direction: column;
-        gap: 36px;
-        padding: 32px 6vw 64px;
+        gap: 30px;
+        padding: 32px 5vw 72px;
       }
 
       .topbar {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 20px;
+        gap: 18px;
+        flex-wrap: wrap;
       }
 
       .brand {
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 4px;
       }
 
       .brand-mark {
-        font-family: "DM Serif Display", serif;
-        font-size: 26px;
+        font-family: "Spectral", serif;
+        font-size: 30px;
         letter-spacing: 0.02em;
       }
 
       .brand-sub {
-        font-size: 12px;
+        font-size: 11px;
         text-transform: uppercase;
-        letter-spacing: 0.3em;
+        letter-spacing: 0.32em;
         color: var(--muted);
       }
 
       .topbar-actions {
         display: flex;
-        gap: 10px;
         flex-wrap: wrap;
+        gap: 10px;
       }
 
       .chip {
@@ -104,41 +129,42 @@
         border-radius: 999px;
         font-size: 11px;
         text-transform: uppercase;
-        letter-spacing: 0.2em;
-        background: rgba(27, 127, 122, 0.12);
-        color: var(--primary);
+        letter-spacing: 0.25em;
+        background: rgba(47, 111, 237, 0.12);
+        color: #1646a6;
+        border: 1px solid rgba(47, 111, 237, 0.22);
       }
 
       .chip.ghost {
-        background: var(--surface);
-        border: 1px solid var(--line);
+        background: rgba(14, 26, 40, 0.04);
         color: var(--muted);
+        border: 1px solid rgba(14, 26, 40, 0.12);
       }
 
       .alert-banner {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 12px;
         align-items: center;
         padding: 14px 18px;
-        border-radius: 14px;
-        background: rgba(242, 95, 92, 0.12);
-        border: 1px solid rgba(242, 95, 92, 0.35);
-        color: #7a2b2a;
+        border-radius: 16px;
+        background: rgba(249, 115, 22, 0.1);
+        border: 1px solid rgba(249, 115, 22, 0.3);
+        color: #93411f;
         font-size: 14px;
       }
 
       .alert-title {
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.14em;
+        letter-spacing: 0.2em;
         font-size: 11px;
       }
 
       .hero-grid {
         display: grid;
         grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-        gap: 40px;
+        gap: 36px;
         align-items: start;
       }
 
@@ -156,32 +182,40 @@
       }
 
       h1 {
-        font-family: "DM Serif Display", serif;
+        font-family: "Spectral", serif;
         font-size: clamp(32px, 4.2vw, 54px);
         margin: 0;
-        letter-spacing: 0.01em;
+        color: #0b1a2b;
       }
 
       .lead {
-        font-size: 18px;
-        line-height: 1.7;
+        font-size: 17px;
+        line-height: 1.75;
         color: var(--muted);
-        max-width: 560px;
+        max-width: 580px;
         margin: 0;
       }
 
       .action-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
         gap: 14px;
       }
 
       .action-card {
-        background: var(--surface);
-        border-radius: 16px;
+        background: var(--panel);
+        border-radius: var(--radius);
         padding: 16px;
         border: 1px solid var(--line);
-        box-shadow: var(--shadow-tight);
+        box-shadow: var(--shadow);
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+      }
+
+      .action-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 28px 48px rgba(12, 26, 46, 0.14);
       }
 
       .action-card h3 {
@@ -193,7 +227,36 @@
         margin: 0;
         font-size: 13px;
         color: var(--muted);
-        line-height: 1.5;
+        line-height: 1.6;
+      }
+
+      .queue-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+        margin-top: 6px;
+      }
+
+      .queue-card {
+        background: rgba(14, 26, 40, 0.04);
+        border-radius: 16px;
+        padding: 14px;
+        border: 1px solid rgba(14, 26, 40, 0.08);
+      }
+
+      .queue-card span {
+        display: block;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.22em;
+        color: var(--muted);
+      }
+
+      .queue-card strong {
+        display: block;
+        font-size: 22px;
+        margin-top: 6px;
+        color: #12355f;
       }
 
       .step-list {
@@ -207,16 +270,16 @@
         align-items: flex-start;
         padding: 12px 14px;
         border-radius: 14px;
-        background: rgba(27, 127, 122, 0.08);
-        border: 1px solid rgba(27, 127, 122, 0.16);
+        background: rgba(14, 165, 164, 0.08);
+        border: 1px solid rgba(14, 165, 164, 0.2);
       }
 
       .step-num {
         width: 28px;
         height: 28px;
         border-radius: 50%;
-        background: var(--primary);
-        color: #fff;
+        background: var(--accent-2);
+        color: #001815;
         display: grid;
         place-items: center;
         font-weight: 700;
@@ -228,24 +291,45 @@
         margin: 0;
         font-size: 14px;
         color: var(--muted);
-        line-height: 1.5;
+        line-height: 1.6;
       }
 
       .console {
         display: flex;
         flex-direction: column;
-        gap: 18px;
+        gap: 16px;
       }
 
       .console-card {
-        background: var(--surface);
-        border-radius: 24px;
+        background: var(--panel-strong);
+        color: #f1f5f9;
+        border-radius: 26px;
         padding: 24px;
-        border: 1px solid var(--line);
-        box-shadow: var(--shadow-soft);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: var(--shadow-strong);
         display: flex;
         flex-direction: column;
         gap: 16px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .console-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          circle at top right,
+          rgba(47, 111, 237, 0.35),
+          transparent 45%
+        );
+        opacity: 0.8;
+        pointer-events: none;
+      }
+
+      .console-card > * {
+        position: relative;
+        z-index: 1;
       }
 
       .console-top {
@@ -258,8 +342,8 @@
         width: 14px;
         height: 14px;
         border-radius: 50%;
-        background: #c4c7d0;
-        box-shadow: 0 0 0 5px rgba(196, 199, 208, 0.2);
+        background: #94a3b8;
+        box-shadow: 0 0 0 5px rgba(148, 163, 184, 0.2);
         transition:
           background 0.2s ease,
           box-shadow 0.2s ease;
@@ -277,28 +361,33 @@
 
       #status-hint {
         font-size: 13px;
-        color: var(--muted);
+        color: rgba(241, 245, 249, 0.72);
         margin-top: 2px;
       }
 
       .primary-button {
         border: none;
-        border-radius: 12px;
+        border-radius: 14px;
         padding: 16px 20px;
         font-size: 16px;
         font-weight: 700;
-        color: #fff;
-        background: linear-gradient(135deg, var(--primary), var(--primary-2));
+        color: #031526;
+        background: linear-gradient(135deg, #5eead4, #60a5fa);
         cursor: pointer;
         transition:
           transform 0.2s ease,
           box-shadow 0.2s ease;
-        box-shadow: 0 12px 24px rgba(27, 127, 122, 0.25);
+        box-shadow: 0 12px 24px rgba(96, 165, 250, 0.35);
       }
 
       .primary-button:hover {
         transform: translateY(-1px);
-        box-shadow: 0 18px 30px rgba(27, 127, 122, 0.3);
+        box-shadow: 0 18px 32px rgba(96, 165, 250, 0.45);
+      }
+
+      .primary-button:focus-visible {
+        outline: 3px solid rgba(94, 234, 212, 0.6);
+        outline-offset: 3px;
       }
 
       .primary-button:disabled {
@@ -311,14 +400,69 @@
       .consent {
         margin: 0;
         font-size: 13px;
-        color: var(--muted);
-        line-height: 1.5;
+        color: rgba(241, 245, 249, 0.68);
+        line-height: 1.6;
       }
 
       .divider {
         height: 1px;
-        background: var(--line);
+        background: rgba(255, 255, 255, 0.12);
         width: 100%;
+      }
+
+      .ticket-panel {
+        display: grid;
+        gap: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .ticket-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .ticket-title {
+        font-weight: 600;
+        font-size: 16px;
+      }
+
+      .ticket-chip {
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+        background: rgba(249, 115, 22, 0.2);
+        color: #fed7aa;
+        border: 1px solid rgba(249, 115, 22, 0.4);
+      }
+
+      .ticket-meta {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 8px;
+        font-size: 13px;
+        color: rgba(241, 245, 249, 0.72);
+      }
+
+      .ticket-log {
+        display: grid;
+        gap: 8px;
+      }
+
+      .ticket-log div {
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 12px;
+        padding: 10px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        font-size: 13px;
+        color: rgba(241, 245, 249, 0.7);
       }
 
       .info-grid {
@@ -335,17 +479,22 @@
       .info-grid p {
         margin: 0;
         font-size: 13px;
-        color: var(--muted);
-        line-height: 1.5;
+        color: rgba(241, 245, 249, 0.72);
+        line-height: 1.6;
       }
 
       .mini-banner {
         border-radius: 12px;
-        background: rgba(47, 93, 159, 0.08);
-        border: 1px solid rgba(47, 93, 159, 0.18);
+        background: rgba(96, 165, 250, 0.14);
+        border: 1px solid rgba(96, 165, 250, 0.35);
         padding: 10px 12px;
         font-size: 12px;
-        color: var(--muted);
+        color: #bfdbfe;
+      }
+
+      .footer-note {
+        font-size: 12px;
+        color: rgba(15, 30, 46, 0.6);
       }
 
       .support-grid {
@@ -355,11 +504,11 @@
       }
 
       .support-card {
-        background: var(--surface);
-        border-radius: 18px;
+        background: var(--panel);
+        border-radius: var(--radius);
         padding: 18px;
         border: 1px solid var(--line);
-        box-shadow: var(--shadow-tight);
+        box-shadow: var(--shadow);
       }
 
       .support-card h3 {
@@ -371,12 +520,7 @@
         margin: 0;
         font-size: 13px;
         color: var(--muted);
-        line-height: 1.5;
-      }
-
-      .footer-note {
-        font-size: 12px;
-        color: var(--muted);
+        line-height: 1.6;
       }
 
       audio {
@@ -384,40 +528,57 @@
       }
 
       :root[data-connection="connecting"] .status-dot {
-        background: #f4a72f;
-        box-shadow: 0 0 0 6px rgba(244, 167, 47, 0.25);
+        background: #f97316;
+        box-shadow: 0 0 0 6px rgba(249, 115, 22, 0.25);
         animation: pulse 1.6s infinite;
       }
 
       :root[data-connection="connected"] .status-dot {
-        background: #18a34a;
-        box-shadow: 0 0 0 6px rgba(24, 163, 74, 0.25);
+        background: #22c55e;
+        box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.25);
       }
 
       :root[data-connection="disconnected"] .status-dot {
-        background: #8d93a1;
-        box-shadow: 0 0 0 6px rgba(141, 147, 161, 0.2);
+        background: #94a3b8;
+        box-shadow: 0 0 0 6px rgba(148, 163, 184, 0.2);
       }
 
       @keyframes pulse {
         0% {
-          box-shadow: 0 0 0 0 rgba(244, 167, 47, 0.3);
+          box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.3);
         }
         70% {
-          box-shadow: 0 0 0 10px rgba(244, 167, 47, 0);
+          box-shadow: 0 0 0 10px rgba(249, 115, 22, 0);
         }
         100% {
-          box-shadow: 0 0 0 0 rgba(244, 167, 47, 0);
+          box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
         }
       }
 
-      @media (max-width: 900px) {
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(14px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .intro,
+      .console-card,
+      .support-grid,
+      .alert-banner {
+        animation: rise 0.8s ease both;
+      }
+
+      @media (max-width: 980px) {
         .hero-grid {
           grid-template-columns: 1fr;
         }
 
         .topbar {
-          flex-direction: column;
           align-items: flex-start;
         }
       }
@@ -434,7 +595,11 @@
 
       @media (prefers-reduced-motion: reduce) {
         .primary-button,
-        .status-dot {
+        .status-dot,
+        .intro,
+        .console-card,
+        .support-grid,
+        .alert-banner {
           animation: none;
           transition: none;
         }
@@ -445,59 +610,80 @@
     <div class="page">
       <header class="topbar">
         <div class="brand">
-          <div class="brand-mark">CareDesk</div>
-          <div class="brand-sub">Medical Help Center</div>
+          <div class="brand-mark">HelpDesk</div>
+          <div class="brand-sub">Support Ticket Operations</div>
         </div>
         <div class="topbar-actions">
-          <div class="chip">Appointments</div>
-          <div class="chip ghost">Secure WebRTC</div>
+          <div class="chip">Ticket Triage</div>
+          <div class="chip ghost">Voice + Chat Intake</div>
         </div>
       </header>
 
       <section class="alert-banner" aria-live="polite">
-        <span class="alert-title">Urgent symptoms</span>
-        <span>Call emergency services or go to the nearest hospital now.</span>
+        <span class="alert-title">Priority alert</span>
+        <span
+          >Escalate outages, billing blocks, and security incidents
+          immediately.</span
+        >
       </section>
 
       <main class="hero-grid">
         <section class="intro">
-          <div class="eyebrow">Info Diagnostic Center</div>
-          <h1>Medical help center for fast appointment support.</h1>
+          <div class="eyebrow">Support Desk Command Center</div>
+          <h1>Support tickets captured fast, routed with confidence.</h1>
           <p class="lead">
-            CareDesk answers calls, confirms intent, gathers patient details,
-            and secures the right appointment window. It also shares clinic
-            basics and takes callback requests when needed.
+            HelpDesk listens, clarifies impact, and assembles complete tickets
+            with ownership, severity, and next steps. Automate intake while your
+            team focuses on high-touch resolution.
           </p>
           <div class="action-grid">
             <div class="action-card">
-              <h3>Book a visit</h3>
-              <p>Collects name, age, phone, department, and reason.</p>
+              <h3>Intake coverage</h3>
+              <p>Guided prompts for account, impact, logs, and reproduction.</p>
             </div>
             <div class="action-card">
-              <h3>Reschedule</h3>
-              <p>Updates date and time preferences with confirmation.</p>
+              <h3>Status responses</h3>
+              <p>Instant updates with SLA timing, owner, and next milestone.</p>
             </div>
             <div class="action-card">
-              <h3>Cancel</h3>
-              <p>Closes appointments and offers a new slot if needed.</p>
+              <h3>Escalation rules</h3>
+              <p>Auto-alert on-call engineers and flag P1 incidents.</p>
             </div>
             <div class="action-card">
-              <h3>Clinic info</h3>
-              <p>Shares hours, location, and department guidance.</p>
+              <h3>Knowledge assist</h3>
+              <p>Surface relevant articles and proven troubleshooting steps.</p>
+            </div>
+          </div>
+          <div class="queue-grid">
+            <div class="queue-card">
+              <span>Open tickets</span>
+              <strong>128</strong>
+            </div>
+            <div class="queue-card">
+              <span>Waiting on customer</span>
+              <strong>36</strong>
+            </div>
+            <div class="queue-card">
+              <span>SLA at risk</span>
+              <strong>12</strong>
+            </div>
+            <div class="queue-card">
+              <span>Avg. first response</span>
+              <strong>18m</strong>
             </div>
           </div>
           <div class="step-list">
             <div class="step">
               <span class="step-num">1</span>
-              <p>Identify the request type and preferred department.</p>
+              <p>Confirm issue type, product area, and user impact.</p>
             </div>
             <div class="step">
               <span class="step-num">2</span>
-              <p>Capture patient details and visit reason one by one.</p>
+              <p>Capture account details, urgency, and reproduction steps.</p>
             </div>
             <div class="step">
               <span class="step-num">3</span>
-              <p>Confirm appointment summary and next steps.</p>
+              <p>Summarize, assign queue, and confirm next action.</p>
             </div>
           </div>
         </section>
@@ -508,9 +694,7 @@
               <div class="status-dot" aria-hidden="true"></div>
               <div class="status-text">
                 <span id="status" aria-live="polite">Disconnected</span>
-                <span id="status-hint"
-                  >Ready for a medical help center call.</span
-                >
+                <span id="status-hint">Ready for a support ticket intake.</span>
               </div>
             </div>
             <button
@@ -521,50 +705,63 @@
               Connect
             </button>
             <p class="consent">
-              By connecting you allow microphone access for the duration of the
-              call.
+              By connecting you allow microphone access for a live ticket
+              conversation.
             </p>
             <div class="divider"></div>
+            <div class="ticket-panel">
+              <div class="ticket-header">
+                <div class="ticket-title">Active Intake Snapshot</div>
+                <div class="ticket-chip">Priority P1</div>
+              </div>
+              <div class="ticket-meta">
+                <div>Requester: Maya Chen</div>
+                <div>Account: Northwind</div>
+                <div>Product: Billing API</div>
+                <div>Impact: Checkout fails</div>
+              </div>
+              <div class="ticket-log">
+                <div>09:02 - Bot confirmed impact and gathered logs.</div>
+                <div>09:04 - Escalation path triggered to On-call.</div>
+                <div>09:06 - Status shared + next update in 30 min.</div>
+              </div>
+            </div>
             <div class="info-grid">
               <div>
-                <h3>Help desk flow</h3>
-                <p>Greeting, intent, details, confirmation, next steps.</p>
+                <h3>Intake checklist</h3>
+                <p>Contact, org ID, severity, summary, reproduction.</p>
               </div>
               <div>
-                <h3>Call readiness</h3>
-                <p>
-                  Use a quiet room and speak clearly for the best experience.
-                </p>
+                <h3>Routing rules</h3>
+                <p>Assign by product, severity, and current on-call roster.</p>
               </div>
               <div>
-                <h3>Patient care</h3>
-                <p>No medical advice, just scheduling and support.</p>
+                <h3>Compliance notes</h3>
+                <p>Hide sensitive data and confirm consent for logs.</p>
               </div>
             </div>
             <div class="mini-banner">
-              Audio is used only for this live session and not stored here.
+              Conversation summaries are logged to the ticket record only.
             </div>
           </div>
           <div class="footer-note">
-            Secure WebRTC voice channel for clinic support.
+            Secure WebRTC voice channel for support ticket intake.
           </div>
         </section>
       </main>
 
       <section class="support-grid">
         <div class="support-card">
-          <h3>Departments supported</h3>
-          <p>
-            Medicine, cardiology, pediatrics, dermatology, ENT, orthopedics.
-          </p>
+          <h3>Queues covered</h3>
+          <p>Billing, API, SSO, Mobile, Data sync, Infrastructure, Security.</p>
         </div>
         <div class="support-card">
-          <h3>Callback requests</h3>
-          <p>Leave your name, phone, and best time to reach you.</p>
+          <h3>Customer channels</h3>
+          <p>Voice, email, chat, and webform intake with shared transcripts.</p>
         </div>
         <div class="support-card">
-          <h3>On-call guidance</h3>
-          <p>Emergency symptoms are redirected to urgent care services.</p>
+          <h3>Automation triggers</h3>
+          <p>Auto-tagging, SLA alerts, and follow-up reminders.</p>
         </div>
       </section>
     </div>
@@ -659,11 +856,11 @@
       };
 
       const _onConnected = () => {
-        setState("connected", "Live call active. Speak naturally.");
+        setState("connected", "Live intake active. Speak naturally.");
       };
 
       const _onDisconnected = () => {
-        setState("disconnected", "Ready for a medical help center call.");
+        setState("disconnected", "Ready for a support ticket intake.");
       };
 
       const connect = async () => {

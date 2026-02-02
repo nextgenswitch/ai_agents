@@ -1,0 +1,12 @@
+{
+  "id": "call_center_assistant_20260201_190534",
+  "name": "Call Center Assistant",
+  "description": "Call Center Assistant",
+  "prompt": "Call Center Assistant",
+  "greeting_message": "Call Center Assistant",
+  "stt_provider": "google",
+  "tts_provider": "deepgram",
+  "llm_provider": "openai",
+  "icon": "user",
+  "color": "orange"
+}

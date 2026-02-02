@@ -1,0 +1,6 @@
+python-dotenv
+fastapi[all]
+uvicorn
+requests
+pipecat-ai[aws,azure,openai,deepgram,cartesia,elevenlabs,silero,webrtc]>=0.0.99
+
