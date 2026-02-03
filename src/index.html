@@ -180,6 +180,28 @@
         color: var(--text-secondary);
         font-size: 0.875rem;
         line-height: 1.6;
+        margin-bottom: 1rem;
+      }
+
+      .agent-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+      }
+
+      .agent-tag-item {
+        font-size: 0.7rem;
+        font-weight: 500;
+        padding: 4px 8px;
+        border-radius: 8px;
+        background-color: var(--bg-primary);
+        border: 1px solid var(--border-light);
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
       }
 
       .agent-card .select-indicator {
@@ -608,7 +630,7 @@
         border: 1px solid var(--border);
         border-radius: 20px;
         width: 100%;
-        max-width: 560px;
+        max-width: 991px;
         max-height: 90vh;
         overflow-y: auto;
         transform: scale(0.9) translateY(20px);
@@ -934,30 +956,43 @@
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label for="llm-provider">LLM Provider</label>
+              <label for="llm-provider"
+                >Large Language Model (LLM) Provider</label
+              >
               <select id="llm-provider">
                 <option value="openai">OpenAI</option>
                 <option value="anthropic">Anthropic</option>
-                <option value="google">Google</option>
-                <option value="groq">Groq</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="stt-provider">STT Provider</label>
-              <select id="stt-provider">
-                <option value="deepgram">Deepgram</option>
-                <option value="openai">OpenAI</option>
-                <option value="google">Google</option>
                 <option value="azure">Azure</option>
+                <option value="deepseek">Deepseek</option>
+                <option value="google">Google</option>
+                <option value="grok">Grok</option>
+                <option value="groq">Groq</option>
+                <option value="ollama">Ollama</option>
+                <option value="openrouter">OpenRouter</option>
+                <option value="perplexity">Perplexity</option>
               </select>
             </div>
             <div class="form-group">
-              <label for="tts-provider">TTS Provider</label>
-              <select id="tts-provider">
+              <label for="stt-provider">Speech-to-Text (STT) Provider</label>
+              <select id="stt-provider">
+                <option value="amazon_transcribe">Amazon Transcribe</option>
+                <option value="azure">Azure</option>
+                <option value="cartesia">Cartesia</option>
                 <option value="deepgram">Deepgram</option>
                 <option value="elevenlabs">ElevenLabs</option>
+                <option value="google">Google</option>
                 <option value="openai">OpenAI</option>
+                <option value="fal">Fal</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="tts-provider">Text-to-Speech (TTS) Provider</label>
+              <select id="tts-provider">
+                <option value="amazon_polly">Amazon Polly</option>
+                <option value="azure">Azure</option>
                 <option value="cartesia">Cartesia</option>
+                <option value="deepgram">Deepgram</option>
+                <option value="elevenlabs">ElevenLabs</option>
               </select>
             </div>
           </div>
@@ -1091,6 +1126,11 @@
                     </div>
                 </div>
                 <p class="agent-description">${agent.description || "Custom AI voice agent"}</p>
+                <div class="agent-tags">
+                    <span class="agent-tag-item">LLM: ${agent.llm_provider || "N/A"}</span>
+                    <span class="agent-tag-item">TTS: ${agent.tts_provider || "N/A"}</span>
+                    <span class="agent-tag-item">STT: ${agent.stt_provider || "N/A"}</span>
+                </div>
             `;
 
         // Click to select
