@@ -30,6 +30,7 @@ from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.services.llm_service import FunctionCallParams
 
 from nextgenswitch_serializer import NextGenSwitchFrameSerializer
+from tools.support_ticket import create_ticket
 from tools.transfer_call import transfer_call
 from llm_service import get_llm_service
 from stt_service import get_stt_service
@@ -266,7 +267,34 @@ async def run_bot(
         asyncio.create_task(transfer_call(call_sid, forwarding_number, base_url, api_key, api_secret))
         await params.result_callback({"status": "transferred"})
 
-    tools = ToolsSchema(standard_tools=[close_session, transfer_call_to])
+    async def support_ticket(
+        params: FunctionCallParams,
+        subject: str,
+        description: str,
+        name: str | None = None,
+        email: str | None = None,
+        phone: str | None = None,
+    ) -> None:
+        """Create a support ticket for the current call."""
+        if not call_sid:
+            logger.error("Support ticket requested without call SID")
+            await params.result_callback({"status": "unsupported"})
+            return
+
+        success = await create_ticket(
+            call_sid=call_sid,
+            subject=subject,
+            description=description,
+            name=name,
+            email=email,
+            phone=phone,
+            base_url=base_url,
+            api_key=api_key,
+            api_secret=api_secret,
+        )
+        await params.result_callback({"status": "created" if success else "failed"})
+
+    tools = ToolsSchema(standard_tools=[close_session, transfer_call_to, support_ticket])
 
     effective_params = bot_params or {}
     stt = get_stt_service(effective_params)
@@ -319,6 +347,7 @@ async def run_bot(
     )
     llm.register_direct_function(close_session, cancel_on_interruption=False)
     llm.register_direct_function(transfer_call_to, cancel_on_interruption=False)
+    llm.register_direct_function(support_ticket, cancel_on_interruption=False)
 
     task = PipelineTask(
         pipeline,
