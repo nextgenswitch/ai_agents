@@ -64,16 +64,10 @@ def get_agent_config(agent: str) -> Dict[str, Any]:
                     break
     
     if not agent_config:
-        logger.warning(f"Agent config not found for: {agent}, using defaults")
-        agent_config = {
-            "id": agent,
-            "name": agent.title(),
-            "prompt": "You are a helpful AI voice assistant.",
-            "greeting_message": "Hello! How can I help you today?",
-            "llm_provider": "openai",
-            "stt_provider": "deepgram",
-            "tts_provider": "deepgram"
-        }
+        # raise error if agent not found
+        logger.error(f"Agent config not found for agent: {agent}")
+        raise HTTPException(status_code=404, detail="Agent config not found")
+    
     
     logger.info(f"Loaded agent config: {agent_config.get('name', agent)}")
     return agent_config
@@ -238,7 +232,9 @@ async def _websocket(websocket: WebSocket) -> None:
 
     bot_params = call_data.get("params") or {}
     agent = bot_params.get("agent") if isinstance(bot_params, dict) else None
+    logger.info("WebSocket call data received: stream_id={}, call_sid={}, agent={}", stream_id, call_sid, agent)
     agent_config = get_agent_config(agent) if agent else None
+
     if agent_config:
         bot_params.setdefault("prompt", agent_config.get("prompt"))
         bot_params.setdefault("greetings", agent_config.get("greeting_message"))
